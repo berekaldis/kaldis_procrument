@@ -12,7 +12,6 @@ export function toast({ title, description, variant = "default" }) {
     setTimeout(() => {
         listeners.forEach((fn) => fn({ ...t, dismiss: true }));
     }, 4000);
-    console.log(`[toast] ${title}${description ? ": " + description : ""}`);
 }
 
 export function useToast() {
