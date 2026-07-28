@@ -1,0 +1,1098 @@
+import { useEffect, useState, useCallback, useMemo } from "react";
+import {
+    Inbox,
+    Search,
+    FileText,
+    Download,
+    Eye,
+    CheckCircle2,
+    XCircle,
+    Columns3,
+    FileImage,
+    File,
+    Plus,
+    X,
+    Trophy,
+    Printer,
+    FileSpreadsheet,
+    PhoneCall,
+    Paperclip,
+} from "lucide-react";
+import { Spinner } from "./ui/spinner.jsx";
+import { Card } from "./ui/card.jsx";
+import { Button } from "./ui/button.jsx";
+import { Input } from "./ui/input.jsx";
+import { Textarea } from "./ui/textarea.jsx";
+import { Label } from "./ui/label.jsx";
+import { EmptyState } from "./ui/empty-state.jsx";
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetDescription,
+} from "./ui/sheet.jsx";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogDescription,
+} from "./ui/dialog.jsx";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "./ui/select.jsx";
+import { Pagination } from "./ui/pagination.jsx";
+import { DateRangeFilter } from "./ui/date-range-filter.jsx";
+import { api, apiPaged, userCan } from "../lib/procurement";
+import {
+    ProformaStatusBadge,
+    ReceivedViaBadge,
+    timeAgo,
+    fmtDate,
+} from "./bits";
+import { useToast } from "../hooks/use-toast";
+import { cn } from "../lib/utils";
+
+function fmtMoney(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function ProformasView() {
+    const [proformas, setProformas] = useState([]);
+    const [meta, setMeta] = useState(null);
+    const [page, setPage] = useState(1);
+    const [suppliers, setSuppliers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [q, setQ] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
+    const [detail, setDetail] = useState(null);
+    const [detailOpen, setDetailOpen] = useState(false);
+    const [detailFull, setDetailFull] = useState(null);
+    const [notes, setNotes] = useState("");
+    const [itemsDraft, setItemsDraft] = useState([]);
+    const [savingItems, setSavingItems] = useState(false);
+    const [manualOpen, setManualOpen] = useState(false);
+    const [compareIds, setCompareIds] = useState([]);
+    const [compareOpen, setCompareOpen] = useState(false);
+    const [user, setUser] = useState(null);
+    const { toast } = useToast();
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams();
+            if (q) params.set("q", q);
+            if (statusFilter !== "all") params.set("status", statusFilter);
+            if (dateFrom) params.set("from", dateFrom);
+            if (dateTo) params.set("to", dateTo);
+            params.set("page", String(page));
+            params.set("perPage", "12");
+            const { data, meta: m } = await apiPaged(`/api/proformas?${params.toString()}`);
+            setProformas(data);
+            setMeta(m);
+        } catch (e) {
+            toast({ title: "Failed to load", description: e.message, variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    }, [q, statusFilter, dateFrom, dateTo, page, toast]);
+
+    useEffect(() => {
+        const t = setTimeout(load, 250);
+        return () => clearTimeout(t);
+    }, [load]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [q, statusFilter, dateFrom, dateTo]);
+
+    useEffect(() => {
+        api("/api/suppliers").then(setSuppliers).catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        api("/api/auth/me")
+            .then((d) => setUser(d.user))
+            .catch(() => {});
+    }, []);
+
+    const openDetail = async (p) => {
+        setDetailOpen(true);
+        setDetail(p);
+        setDetailFull(null);
+        setNotes("");
+        setItemsDraft([]);
+        try {
+            const full = await api(`/api/proformas/${p.id}`);
+            setDetailFull(full);
+            setNotes(full.notes || "");
+            setItemsDraft(full.items && full.items.length ? full.items : []);
+        } catch {}
+    };
+
+    const setStatus = async (status) => {
+        if (!detail) return;
+        try {
+            await api(`/api/proformas/${detail.id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ status, notes }),
+            });
+            toast({
+                title: "Proforma updated",
+                description: `${detail.supplier.legalName} → ${status}`,
+            });
+            await load();
+            const full = await api(`/api/proformas/${detail.id}`);
+            setDetailFull(full);
+            setDetail({ ...detail, status });
+        } catch (e) {
+            toast({ title: "Failed", description: e.message, variant: "destructive" });
+        }
+    };
+
+    const saveNotes = async () => {
+        if (!detail) return;
+        try {
+            await api(`/api/proformas/${detail.id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ notes }),
+            });
+            toast({ title: "Notes saved" });
+        } catch (e) {
+            toast({ title: "Failed", description: e.message, variant: "destructive" });
+        }
+    };
+
+    const savePricing = async () => {
+        if (!detail) return;
+        const cleaned = itemsDraft
+            .filter((r) => r.itemName?.trim())
+            .map((r) => ({
+                itemName: r.itemName.trim(),
+                quantity: Number(r.quantity) || 0,
+                unit: r.unit || "pcs",
+                unitPrice: Number(r.unitPrice) || 0,
+            }));
+        setSavingItems(true);
+        try {
+            const updated = await api(`/api/proformas/${detail.id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ items: cleaned }),
+            });
+            setDetailFull(updated);
+            setItemsDraft(updated.items || []);
+            toast({ title: "Pricing saved", description: `Total: ${fmtMoney(updated.totalAmount)} ${updated.currency || "ETB"}` });
+            await load();
+        } catch (e) {
+            toast({ title: "Failed to save pricing", description: e.message, variant: "destructive" });
+        } finally {
+            setSavingItems(false);
+        }
+    };
+
+    const toggleCompare = (id) => {
+        setCompareIds((prev) => {
+            if (prev.includes(id)) return prev.filter((x) => x !== id);
+            if (prev.length >= 4) {
+                toast({ title: "Max 4 proformas to compare", variant: "destructive" });
+                return prev;
+            }
+            return [...prev, id];
+        });
+    };
+
+    const compareProformas = compareIds
+        .map((id) => proformas.find((p) => p.id === id))
+        .filter(Boolean);
+
+    return (
+        <div className="space-y-4">
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search by supplier, request…"
+                        value={q}
+                        onChange={(e) => setQ(e.target.value)}
+                        className="pl-9"
+                    />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-44">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="received">Received</SelectItem>
+                        <SelectItem value="reviewed">Reviewed</SelectItem>
+                        <SelectItem value="accepted">Accepted</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                </Select>
+                <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
+                {compareIds.length > 0 && (
+                    <Button variant="outline" onClick={() => setCompareOpen(true)} className="shrink-0">
+                        <Columns3 className="h-4 w-4 mr-1" />
+                        Compare ({compareIds.length})
+                    </Button>
+                )}
+                {userCan(user, "proformas.review") && (
+                    <Button variant="outline" onClick={() => setManualOpen(true)} className="shrink-0">
+                        <PhoneCall className="h-4 w-4 mr-1" />
+                        Log Manual Response
+                    </Button>
+                )}
+            </div>
+
+            <div className="text-xs text-muted-foreground bg-muted/40 border rounded-md px-3 py-2 flex items-center gap-2">
+                <Columns3 className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                    Select up to 4 proformas and click <b>Compare</b> for a structured price comparison. Enter unit
+                    prices per item in a proforma's detail panel to power the comparison table.
+                </span>
+            </div>
+
+            {/* List */}
+            {loading ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <Card key={i} className="h-40 animate-pulse bg-muted/40" />
+                    ))}
+                </div>
+            ) : proformas.length === 0 ? (
+                <Card>
+                    <EmptyState
+                        icon={Inbox}
+                        title="No proformas yet"
+                        description="Proformas submitted by suppliers via Telegram will appear here."
+                        action={
+                            userCan(user, "proformas.review") && (
+                                <Button variant="outline" onClick={() => setManualOpen(true)}>
+                                    <PhoneCall className="h-4 w-4 mr-1" />
+                                    Log Manual Response
+                                </Button>
+                            )
+                        }
+                    />
+                </Card>
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {proformas.map((p) => {
+                        const inCompare = compareIds.includes(p.id);
+                        return (
+                            <Card
+                                key={p.id}
+                                className={cn(
+                                    "p-5 hover:shadow-md transition-shadow flex flex-col relative",
+                                    inCompare && "ring-2 ring-brand-500"
+                                )}
+                            >
+                                <button
+                                    className={cn(
+                                        "absolute top-3 right-3 grid place-items-center h-6 w-6 rounded border transition-colors",
+                                        inCompare
+                                            ? "bg-brand-600 text-white border-brand-600"
+                                            : "bg-card text-muted-foreground border-border hover:border-brand-300 hover:text-brand-600"
+                                    )}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleCompare(p.id);
+                                    }}
+                                    title="Add to comparison"
+                                >
+                                    <Columns3 className="h-3 w-3" />
+                                </button>
+                                <div
+                                    className="flex-1 cursor-pointer"
+                                    onClick={() => openDetail(p)}
+                                >
+                                    <div className="flex items-center gap-2 mb-2 pr-8">
+                                        <ReceivedViaBadge via={p.receivedVia} />
+                                        <ProformaStatusBadge status={p.status} />
+                                    </div>
+                                    <div className="flex items-start gap-3 mb-2">
+                                        <div className="grid place-items-center h-10 w-10 rounded-md bg-gold-50 text-gold-700 dark:bg-gold-900/40 dark:text-gold-300 shrink-0">
+                                            <FileIcon type={p.fileType} />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="font-medium text-sm truncate">{p.supplier.legalName}</div>
+                                            <div className="text-xs text-muted-foreground truncate">
+                                                {p.request.referenceNo} · {p.request.title}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {p.totalAmount != null ? (
+                                        <div className="text-sm font-semibold text-brand-700 dark:text-gold-300 tabular-nums">
+                                            {fmtMoney(p.totalAmount)} {p.currency || "ETB"}
+                                        </div>
+                                    ) : p.message ? (
+                                        <p className="text-xs text-muted-foreground line-clamp-2 mt-2 whitespace-pre-wrap">
+                                            {p.message}
+                                        </p>
+                                    ) : null}
+                                </div>
+                                <div className="flex items-center justify-between mt-3 pt-3 border-t text-xs">
+                                    <span className="text-muted-foreground">{timeAgo(p.receivedAt)}</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => openDetail(p)}
+                                    >
+                                        <Eye className="h-3.5 w-3.5 mr-1" />
+                                        View
+                                    </Button>
+                                </div>
+                            </Card>
+                        );
+                    })}
+                </div>
+            )}
+            <Pagination meta={meta} onPageChange={setPage} />
+
+            {/* Detail sheet */}
+            <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
+                <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+                    {detail && (
+                        <>
+                            <SheetHeader>
+                                <SheetTitle className="flex items-center gap-2 flex-wrap">
+                                    <span>Proforma from {detail.supplier.legalName}</span>
+                                </SheetTitle>
+                                <SheetDescription className="flex items-center gap-2 flex-wrap">
+                                    <ReceivedViaBadge via={detail.receivedVia} />
+                                    <ProformaStatusBadge status={detail.status} />
+                                    <span className="text-xs">{timeAgo(detail.receivedAt)}</span>
+                                </SheetDescription>
+                            </SheetHeader>
+
+                            <div className="mt-6 space-y-5">
+                                <Card className="p-4 bg-muted/30">
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                                        For Request
+                                    </div>
+                                    <div className="font-mono text-sm font-medium text-brand-700 dark:text-gold-300">
+                                        {detail.request.referenceNo}
+                                    </div>
+                                    <div className="text-sm">{detail.request.title}</div>
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                        Deadline: {fmtDate(detail.request.deadline)}
+                                    </div>
+                                </Card>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Card className="p-3">
+                                        <div className="text-xs text-muted-foreground">Supplier</div>
+                                        <div className="text-sm font-medium">{detail.supplier.legalName}</div>
+                                        {detail.supplier.tradeName && (
+                                            <div className="text-xs text-muted-foreground">{detail.supplier.tradeName}</div>
+                                        )}
+                                    </Card>
+                                    <Card className="p-3">
+                                        <div className="text-xs text-muted-foreground">Received</div>
+                                        <div className="text-sm font-medium">{fmtDate(detail.receivedAt)}</div>
+                                    </Card>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide">
+                                            Priced Line Items
+                                        </div>
+                                        {userCan(user, "proformas.review") && (
+                                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={savePricing} disabled={savingItems}>
+                                                {savingItems && <Spinner className="h-3 w-3 mr-1" />}
+                                                Save Pricing
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <ItemRows
+                                        rows={itemsDraft}
+                                        setRows={setItemsDraft}
+                                        requestItems={detailFull?.request?.items || []}
+                                        disabled={!userCan(user, "proformas.review")}
+                                        currency={detailFull?.currency || "ETB"}
+                                    />
+                                </div>
+
+                                {detail.filePath ? (
+                                    <div>
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                                            Attachment
+                                        </div>
+                                        <Card className="p-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="grid place-items-center h-12 w-12 rounded-lg bg-gold-50 text-gold-700 dark:bg-gold-900/40 dark:text-gold-300">
+                                                    <FileIcon type={detail.fileType} large />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="text-sm font-medium truncate">{detail.fileName}</div>
+                                                    <div className="text-xs text-muted-foreground">{detail.fileType}</div>
+                                                </div>
+                                                <a href={`/${detail.filePath}`} target="_blank" rel="noopener noreferrer">
+                                                    <Button size="sm" variant="outline">
+                                                        <Download className="h-3.5 w-3.5 mr-1" />
+                                                        Download
+                                                    </Button>
+                                                </a>
+                                            </div>
+                                            {detail.fileType?.startsWith("image/") && (
+                                                <div className="mt-3 rounded-md overflow-hidden border">
+                                                    <img
+                                                        src={`/${detail.filePath}`}
+                                                        alt={detail.fileName || "proforma"}
+                                                        className="w-full h-auto"
+                                                    />
+                                                </div>
+                                            )}
+                                            {detail.fileType === "application/pdf" && (
+                                                <div className="mt-3 rounded-md overflow-hidden border h-96">
+                                                    <iframe
+                                                        src={`/${detail.filePath}`}
+                                                        className="w-full h-full"
+                                                        title="Proforma PDF"
+                                                    />
+                                                </div>
+                                            )}
+                                        </Card>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                                            Message
+                                        </div>
+                                        <Card className="p-4">
+                                            <p className="text-sm whitespace-pre-wrap">{detail.message || "(no message)"}</p>
+                                        </Card>
+                                    </div>
+                                )}
+
+                                {detail.filePath && detail.message && (
+                                    <div>
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                                            Caption / Message
+                                        </div>
+                                        <Card className="p-3 bg-muted/30">
+                                            <p className="text-sm whitespace-pre-wrap">{detail.message}</p>
+                                        </Card>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <Label className="text-xs font-medium mb-1.5 block">Internal Notes</Label>
+                                    <Textarea
+                                        value={notes}
+                                        onChange={(e) => setNotes(e.target.value)}
+                                        rows={3}
+                                        placeholder="Add review notes…"
+                                    />
+                                    <Button size="sm" variant="outline" className="mt-2" onClick={saveNotes}>
+                                        Save Notes
+                                    </Button>
+                                </div>
+
+                                {userCan(user, "proformas.review") && (
+                                    <div className="pt-3 border-t">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                                            Update Status
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button
+                                                variant={detail.status === "reviewed" ? "default" : "outline"}
+                                                onClick={() => setStatus("reviewed")}
+                                            >
+                                                <Eye className="h-4 w-4 mr-1" />
+                                                Reviewed
+                                            </Button>
+                                            <Button
+                                                variant={detail.status === "accepted" ? "default" : "outline"}
+                                                onClick={() => setStatus("accepted")}
+                                                className={detail.status === "accepted" ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}
+                                            >
+                                                <CheckCircle2 className="h-4 w-4 mr-1" />
+                                                Accept
+                                            </Button>
+                                            <Button
+                                                variant={detail.status === "rejected" ? "default" : "outline"}
+                                                onClick={() => setStatus("rejected")}
+                                                className={cn("col-span-2", detail.status === "rejected" && "bg-rose-600 text-white hover:bg-rose-700")}
+                                            >
+                                                <XCircle className="h-4 w-4 mr-1" />
+                                                Reject
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+                    {!detail && (
+                        <div className="h-full grid place-items-center">
+                            <Spinner className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                    )}
+                </SheetContent>
+            </Sheet>
+
+            {/* Manual entry dialog */}
+            <ManualEntryDialog
+                open={manualOpen}
+                onOpenChange={setManualOpen}
+                suppliers={suppliers}
+                onDone={() => {
+                    setManualOpen(false);
+                    load();
+                }}
+            />
+
+            {/* Compare dialog */}
+            <CompareDialog
+                open={compareOpen}
+                onOpenChange={setCompareOpen}
+                proformas={compareProformas}
+                onClear={() => setCompareIds([])}
+                onView={(p) => {
+                    setCompareOpen(false);
+                    openDetail(p);
+                }}
+            />
+        </div>
+    );
+}
+
+function ItemRows({ rows, setRows, requestItems, disabled, currency = "ETB" }) {
+    const addFromRequest = () => {
+        const existingNames = new Set(rows.map((r) => r.itemName));
+        const toAdd = (requestItems || [])
+            .filter((ri) => !existingNames.has(ri.itemName))
+            .map((ri) => ({ itemName: ri.itemName, quantity: Number(ri.quantity) || 1, unit: ri.unit || "pcs", unitPrice: 0 }));
+        if (toAdd.length === 0) return;
+        setRows([...rows, ...toAdd]);
+    };
+    const addBlank = () => setRows([...rows, { itemName: "", quantity: 1, unit: "pcs", unitPrice: 0 }]);
+    const updateRow = (i, patch) => setRows(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+    const removeRow = (i) => setRows(rows.filter((_, idx) => idx !== i));
+    const total = rows.reduce((s, r) => s + (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0), 0);
+
+    if (disabled && rows.length === 0) {
+        return <div className="text-xs text-muted-foreground italic">No structured pricing entered for this proforma.</div>;
+    }
+
+    return (
+        <div className="space-y-2">
+            <div className="border rounded-lg overflow-hidden overflow-x-auto">
+                <table className="w-full text-xs min-w-[420px]">
+                    <thead className="bg-muted/50">
+                        <tr>
+                            <th className="text-left px-2 py-1.5 font-medium">Item</th>
+                            <th className="text-right px-2 py-1.5 font-medium w-14">Qty</th>
+                            <th className="text-left px-2 py-1.5 font-medium w-16">Unit</th>
+                            <th className="text-right px-2 py-1.5 font-medium w-24">Unit Price</th>
+                            <th className="text-right px-2 py-1.5 font-medium w-24">Line Total</th>
+                            {!disabled && <th className="w-7" />}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.length === 0 && (
+                            <tr>
+                                <td colSpan={disabled ? 5 : 6} className="px-2 py-3 text-center text-muted-foreground">
+                                    No items yet.
+                                </td>
+                            </tr>
+                        )}
+                        {rows.map((r, i) => (
+                            <tr key={i} className="border-t border-border">
+                                <td className="px-2 py-1">
+                                    {disabled ? (
+                                        r.itemName
+                                    ) : (
+                                        <input
+                                            value={r.itemName}
+                                            onChange={(e) => updateRow(i, { itemName: e.target.value })}
+                                            className="w-full bg-transparent outline-none"
+                                            placeholder="Item name"
+                                        />
+                                    )}
+                                </td>
+                                <td className="px-2 py-1 text-right">
+                                    {disabled ? (
+                                        r.quantity
+                                    ) : (
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={r.quantity}
+                                            onChange={(e) => updateRow(i, { quantity: e.target.value })}
+                                            className="w-full bg-transparent outline-none text-right"
+                                        />
+                                    )}
+                                </td>
+                                <td className="px-2 py-1">
+                                    {disabled ? (
+                                        r.unit
+                                    ) : (
+                                        <input
+                                            value={r.unit || ""}
+                                            onChange={(e) => updateRow(i, { unit: e.target.value })}
+                                            className="w-full bg-transparent outline-none"
+                                        />
+                                    )}
+                                </td>
+                                <td className="px-2 py-1 text-right">
+                                    {disabled ? (
+                                        fmtMoney(r.unitPrice)
+                                    ) : (
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={r.unitPrice}
+                                            onChange={(e) => updateRow(i, { unitPrice: e.target.value })}
+                                            className="w-full bg-transparent outline-none text-right"
+                                        />
+                                    )}
+                                </td>
+                                <td className="px-2 py-1 text-right tabular-nums">
+                                    {fmtMoney((Number(r.quantity) || 0) * (Number(r.unitPrice) || 0))}
+                                </td>
+                                {!disabled && (
+                                    <td className="px-1 text-center">
+                                        <button type="button" onClick={() => removeRow(i)} className="text-muted-foreground hover:text-destructive">
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </td>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                    {rows.length > 0 && (
+                        <tfoot>
+                            <tr className="border-t border-border bg-muted/30 font-medium">
+                                <td colSpan={4} className="px-2 py-1.5 text-right">
+                                    Total ({currency})
+                                </td>
+                                <td className="px-2 py-1.5 text-right tabular-nums">{fmtMoney(total)}</td>
+                                {!disabled && <td />}
+                            </tr>
+                        </tfoot>
+                    )}
+                </table>
+            </div>
+            {!disabled && (
+                <div className="flex gap-2 flex-wrap">
+                    {requestItems?.length > 0 && (
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={addFromRequest}>
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add request items
+                        </Button>
+                    )}
+                    <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={addBlank}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add row
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function FileIcon({ type, large }) {
+    const s = large ? "h-6 w-6" : "h-4 w-4";
+    if (type?.startsWith("image/")) return <FileImage className={s} />;
+    if (type === "application/pdf") return <FileText className={s} />;
+    return <File className={s} />;
+}
+
+function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
+    const itemNames = useMemo(() => {
+        const seen = [];
+        const set = new Set();
+        for (const p of proformas) {
+            for (const item of p.items || []) {
+                if (!set.has(item.itemName)) {
+                    set.add(item.itemName);
+                    seen.push(item.itemName);
+                }
+            }
+        }
+        return seen;
+    }, [proformas]);
+
+    const bestPricePerItem = useMemo(() => {
+        const map = {};
+        for (const name of itemNames) {
+            let min = null;
+            for (const p of proformas) {
+                const item = (p.items || []).find((i) => i.itemName === name);
+                if (item && (min === null || Number(item.unitPrice) < min)) {
+                    min = Number(item.unitPrice);
+                }
+            }
+            map[name] = min;
+        }
+        return map;
+    }, [itemNames, proformas]);
+
+    const pricedProformas = proformas.filter((p) => p.totalAmount != null);
+    const bestTotal = pricedProformas.length
+        ? Math.min(...pricedProformas.map((p) => Number(p.totalAmount)))
+        : null;
+
+    const exportCsv = () => {
+        const header = ["Item", ...proformas.map((p) => p.supplier.legalName)];
+        const lines = [header];
+        for (const name of itemNames) {
+            const row = [name];
+            for (const p of proformas) {
+                const item = (p.items || []).find((i) => i.itemName === name);
+                row.push(item ? item.unitPrice : "");
+            }
+            lines.push(row);
+        }
+        lines.push(["Total", ...proformas.map((p) => (p.totalAmount != null ? p.totalAmount : ""))]);
+        const csv = lines.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `proforma-comparison-${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader className="kaldi-no-print">
+                    <DialogTitle className="flex items-center gap-2">
+                        <Columns3 className="h-5 w-5 text-brand-600" />
+                        Proforma Comparison
+                    </DialogTitle>
+                    <DialogDescription>
+                        Structured price comparison across {proformas.length} proforma{proformas.length === 1 ? "" : "s"}.
+                    </DialogDescription>
+                </DialogHeader>
+
+                {proformas.length === 0 ? (
+                    <div className="py-12 text-center text-sm text-muted-foreground">
+                        Select proformas to compare using the grid icon on each card.
+                    </div>
+                ) : (
+                    <div className="kaldi-print-area space-y-5">
+                        {itemNames.length > 0 ? (
+                            <div className="border rounded-lg overflow-x-auto">
+                                <table className="w-full text-sm min-w-[500px]">
+                                    <thead className="bg-muted/50">
+                                        <tr>
+                                            <th className="text-left px-3 py-2 font-medium">Item</th>
+                                            {proformas.map((p) => (
+                                                <th key={p.id} className="text-right px-3 py-2 font-medium whitespace-nowrap">
+                                                    {p.supplier.legalName}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {itemNames.map((name) => (
+                                            <tr key={name} className="border-t border-border">
+                                                <td className="px-3 py-2">{name}</td>
+                                                {proformas.map((p) => {
+                                                    const item = (p.items || []).find((i) => i.itemName === name);
+                                                    const isBest = item && Number(item.unitPrice) === bestPricePerItem[name];
+                                                    return (
+                                                        <td
+                                                            key={p.id}
+                                                            className={cn(
+                                                                "px-3 py-2 text-right tabular-nums",
+                                                                isBest && "bg-emerald-50 text-emerald-800 font-medium dark:bg-emerald-950 dark:text-emerald-300"
+                                                            )}
+                                                        >
+                                                            {item ? fmtMoney(item.unitPrice) : <span className="text-muted-foreground/50">—</span>}
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr className="border-t border-border bg-muted/30">
+                                            <td className="px-3 py-2 font-semibold">Total</td>
+                                            {proformas.map((p) => {
+                                                const isBest = p.totalAmount != null && Number(p.totalAmount) === bestTotal;
+                                                return (
+                                                    <td
+                                                        key={p.id}
+                                                        className={cn(
+                                                            "px-3 py-2 text-right font-semibold tabular-nums",
+                                                            isBest && "text-gold-700 dark:text-gold-300"
+                                                        )}
+                                                    >
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            {isBest && <Trophy className="h-3.5 w-3.5" />}
+                                                            {p.totalAmount != null ? `${fmtMoney(p.totalAmount)} ${p.currency || "ETB"}` : "—"}
+                                                        </div>
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="text-sm text-muted-foreground border rounded-lg p-4 bg-muted/20">
+                                None of the selected proformas have structured pricing yet. Open a proforma and use{" "}
+                                <b>Save Pricing</b> to enter item prices.
+                            </div>
+                        )}
+
+                        <div
+                            className="grid gap-4 kaldi-no-print"
+                            style={{ gridTemplateColumns: `repeat(${Math.min(proformas.length, 4)}, minmax(0, 1fr))` }}
+                        >
+                            {proformas.map((p) => (
+                                <Card key={p.id} className="p-4 flex flex-col">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <ReceivedViaBadge via={p.receivedVia} />
+                                    </div>
+                                    <div className="font-medium text-sm mb-1">{p.supplier.legalName}</div>
+                                    <div className="text-xs text-muted-foreground mb-3">{p.request.referenceNo}</div>
+                                    <div className="space-y-2 text-xs">
+                                        <div>
+                                            <span className="text-muted-foreground">Status:</span>{" "}
+                                            <ProformaStatusBadge status={p.status} />
+                                        </div>
+                                        <div>
+                                            <span className="text-muted-foreground">Received:</span> {fmtDate(p.receivedAt)}
+                                        </div>
+                                        {p.fileName && (
+                                            <div className="flex items-center gap-1">
+                                                <File className="h-3 w-3" />
+                                                <span className="truncate">{p.fileName}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mt-auto pt-3 flex gap-1">
+                                        {p.filePath && (
+                                            <a href={`/${p.filePath}`} target="_blank" rel="noopener noreferrer" className="flex-1">
+                                                <Button size="sm" variant="outline" className="w-full">
+                                                    <Download className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </a>
+                                        )}
+                                        <Button size="sm" variant="outline" className="flex-1" onClick={() => onView(p)}>
+                                            <Eye className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <DialogFooter className="kaldi-no-print">
+                    <Button variant="outline" onClick={onClear}>
+                        Clear selection
+                    </Button>
+                    {proformas.length > 0 && (
+                        <>
+                            <Button variant="outline" onClick={exportCsv}>
+                                <FileSpreadsheet className="h-4 w-4 mr-1" />
+                                Export CSV
+                            </Button>
+                            <Button variant="outline" onClick={() => window.print()}>
+                                <Printer className="h-4 w-4 mr-1" />
+                                Print / Save as PDF
+                            </Button>
+                        </>
+                    )}
+                    <Button onClick={() => onOpenChange(false)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function ManualEntryDialog({ open, onOpenChange, suppliers, onDone }) {
+    const { toast } = useToast();
+    const [supplierId, setSupplierId] = useState("");
+    const [availableRequests, setAvailableRequests] = useState([]);
+    const [requestId, setRequestId] = useState("");
+    const [requestItems, setRequestItems] = useState([]);
+    const [message, setMessage] = useState("");
+    const [notes, setNotes] = useState("");
+    const [file, setFile] = useState(null);
+    const [items, setItems] = useState([]);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (!open) {
+            setSupplierId(""); setRequestId(""); setMessage(""); setNotes(""); setFile(null); setItems([]);
+        }
+    }, [open]);
+
+    useEffect(() => {
+        if (!supplierId) {
+            setAvailableRequests([]);
+            setRequestId("");
+            return;
+        }
+        api(`/api/proforma-requests?status=sent`).then((reqs) => {
+            const open = reqs.filter((r) => !r.respondedSupplierIds.includes(supplierId));
+            setAvailableRequests(open);
+            setRequestId(open[0]?.id || "");
+        }).catch(() => {});
+    }, [supplierId]);
+
+    useEffect(() => {
+        if (!requestId) {
+            setRequestItems([]);
+            return;
+        }
+        api(`/api/proforma-requests/${requestId}`).then((r) => setRequestItems(r.items || [])).catch(() => setRequestItems([]));
+    }, [requestId]);
+
+    const submit = async () => {
+        if (!supplierId || !requestId) {
+            toast({ title: "Select a supplier and request", variant: "destructive" });
+            return;
+        }
+        setSaving(true);
+        try {
+            const form = new FormData();
+            form.append("supplierId", supplierId);
+            form.append("requestId", requestId);
+            if (message.trim()) form.append("message", message.trim());
+            if (notes.trim()) form.append("notes", notes.trim());
+            if (file) form.append("file", file);
+            items
+                .filter((r) => r.itemName?.trim())
+                .forEach((r, i) => {
+                    form.append(`items[${i}][itemName]`, r.itemName);
+                    form.append(`items[${i}][quantity]`, String(Number(r.quantity) || 0));
+                    form.append(`items[${i}][unit]`, r.unit || "pcs");
+                    form.append(`items[${i}][unitPrice]`, String(Number(r.unitPrice) || 0));
+                });
+
+            const res = await fetch("/api/proformas/manual", {
+                method: "POST",
+                body: form,
+                credentials: "same-origin",
+                headers: { Accept: "application/json" },
+            });
+            if (!res.ok) {
+                const j = await res.json().catch(() => ({}));
+                throw new Error(j.error || j.message || `Request failed (${res.status})`);
+            }
+
+            toast({ title: "Response logged", description: "Recorded as a manual proforma." });
+            onDone();
+        } catch (e) {
+            toast({ title: "Failed", description: e.message, variant: "destructive" });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <PhoneCall className="h-5 w-5 text-brand-600" />
+                        Log Manual Response
+                    </DialogTitle>
+                    <DialogDescription>
+                        Record a proforma a supplier sent outside Telegram — by phone, email, or in person.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-4 py-2">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <Label className="text-xs font-medium mb-1.5 block">Supplier *</Label>
+                            <Select value={supplierId} onValueChange={setSupplierId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Choose a supplier…" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {suppliers.map((s) => (
+                                        <SelectItem key={s.id} value={s.id}>
+                                            {s.legalName}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label className="text-xs font-medium mb-1.5 block">Request *</Label>
+                            <Select value={requestId} onValueChange={setRequestId} disabled={!supplierId || availableRequests.length === 0}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={supplierId ? "Choose a request…" : "Select supplier first"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableRequests.map((r) => (
+                                        <SelectItem key={r.id} value={r.id}>
+                                            {r.referenceNo} — {r.title}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <Label className="text-xs font-medium mb-1.5 block">Line Items</Label>
+                        <ItemRows rows={items} setRows={setItems} requestItems={requestItems} disabled={false} />
+                    </div>
+
+                    <div>
+                        <Label className="text-xs font-medium mb-1.5 block">Message / Quote Summary</Label>
+                        <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3} placeholder="What the supplier quoted…" />
+                    </div>
+
+                    <div>
+                        <Label className="text-xs font-medium mb-1.5 block">Attachment (optional)</Label>
+                        <div className="flex items-center gap-2">
+                            <label className="flex-1 flex items-center gap-2 border rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-accent transition-colors">
+                                <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                <span className="truncate text-muted-foreground">{file ? file.name : "Attach a PDF, image, or document…"}</span>
+                                <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx" />
+                            </label>
+                            {file && (
+                                <Button type="button" variant="ghost" size="icon" onClick={() => setFile(null)}>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <Label className="text-xs font-medium mb-1.5 block">Internal Notes</Label>
+                        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="How this was received, who took the call…" />
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={submit} disabled={saving || !supplierId || !requestId}>
+                        {saving && <Spinner className="h-4 w-4 mr-1" />}
+                        Log Response
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+export default ProformasView;
