@@ -31,7 +31,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd /home/kaldisbp/repositories/kaldis-procurement
+            cd /home/kaldisbp/repositories/kaldis_procrument
             git pull origin main
             composer install --no-dev --optimize-autoloader
             php artisan migrate --force
@@ -48,5 +48,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           source: 'public/build/*'
-          target: '/home/kaldisbp/repositories/kaldis-procurement/public/build'
+          target: '/home/kaldisbp/repositories/kaldis_procrument/public/build'
           strip_components: 2
