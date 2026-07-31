@@ -526,12 +526,12 @@ export function RequestsView({ onNavigate }) {
                                             ) : (
                                                 <Send className="h-4 w-4 mr-1" />
                                             )}
-                                            Send to {detail.suppliers.length} Suppliers via Telegram
+                                            Approve & Send to {detail.suppliers.length} Suppliers via Telegram
                                         </Button>
                                     )}
                                     {detail.status === "draft" && (
                                         <p className="text-xs text-muted-foreground text-center">
-                                            This will notify all selected suppliers through the Telegram bot and move the
+                                            Approving this proforma request will notify all selected suppliers through the Telegram bot and move the
                                             request to "Sent" status.
                                         </p>
                                     )}

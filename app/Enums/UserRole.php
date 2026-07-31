@@ -13,9 +13,9 @@ enum UserRole: string
     {
         return match ($this) {
             self::ADMIN => 'Administrator',
-            self::PURCHASER => 'Purchaser',
+            self::PURCHASER => 'Purchase Manager',
             self::FINANCE => 'Finance',
-            self::REQUESTER => 'Requester',
+            self::REQUESTER => 'Proforma Requester',
         };
     }
 
@@ -23,9 +23,9 @@ enum UserRole: string
     {
         return match ($this) {
             self::ADMIN => 'Full system access — manage users, suppliers, requests, proformas, audit, and settings.',
-            self::PURCHASER => 'Manage supplier database, create and send proforma requests, review proformas.',
+            self::PURCHASER => 'Manage suppliers, approve proforma requests to send to selected suppliers, and review proformas.',
             self::FINANCE => 'Review and accept/reject proformas, view dashboard, audit, and notifications.',
-            self::REQUESTER => 'Create proforma requests, view suppliers, dashboard, and notifications.',
+            self::REQUESTER => 'Mainly request proformas (create proforma requests for Purchase Manager approval).',
         };
     }
 }

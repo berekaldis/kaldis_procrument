@@ -103,13 +103,13 @@ export const translations = {
 
         // Roles
         "role.admin": "Administrator",
-        "role.purchaser": "Purchaser",
+        "role.purchaser": "Purchase Manager",
         "role.finance": "Finance Officer",
-        "role.requester": "Requester",
+        "role.requester": "Proforma Requester",
         "role.admin.desc": "Full system access — manages users, suppliers, settings & all procurement data",
-        "role.purchaser.desc": "Creates proforma requests, manages suppliers, sends Telegram notifications & reviews proformas",
+        "role.purchaser.desc": "Approves requested proformas to send to selected suppliers via Telegram, manages suppliers & reviews proformas",
         "role.finance.desc": "Reviews, accepts or rejects submitted proformas & monitors procurement activity",
-        "role.requester.desc": "Creates proforma requests & views the supplier directory",
+        "role.requester.desc": "Mainly requests proformas (creates draft proforma requests for Purchase Manager approval) & views supplier directory",
 
         // Login
         "login.title": "Sign in",
@@ -290,13 +290,13 @@ export const translations = {
 
         // Roles
         "role.admin": "አስተዳዳሪ",
-        "role.purchaser": "ገዢ",
+        "role.purchaser": "የግዢ ሥራ አስኪያጅ (Purchase Manager)",
         "role.finance": "የፋይናንስ ኦፊሰር",
-        "role.requester": "ጠያቂ",
+        "role.requester": "የፕሮፎርማ ጠያቂ (Proforma Requester)",
         "role.admin.desc": "ሙሉ የስርዓት መዳረሻ — ተጠቃሚዎችን፣ አቅራቢዎችን፣ ቅንብሮችን እና ሁሉንም የግዢ ውሂብ ያስተዳድራል",
-        "role.purchaser.desc": "የፕሮፎርማ ጥያቄዎችን ይፈጥራል፣ አቅራቢዎችን ያስተዳድራል፣ በቴሌግራም ማሳወቂያ ይልካል እና ፕሮፎርማዎችን ይገመግማል",
+        "role.purchaser.desc": "የተጠየቁ ፕሮፎርማዎችን ያጸድቃል:: ሲጸድቅ ለተመረጡ አቅራቢዎች በቴሌግራም ይላካል:: አቅራቢዎችን ያስተዳድራል እና ፕሮፎርማዎችን ይገመግማል",
         "role.finance.desc": "የገቡ ፕሮፎርማዎችን ይገመግማል፣ ያጸድቃል ወይም ውድቅ ያደርጋል እንዲሁም የግዢ እንቅስቃሴን ይከታተላል",
-        "role.requester.desc": "የፕሮፎርማ ጥያቄዎችን ይፈጥራል እና የአቅራቢ ዝርዝርን ይመለከታል",
+        "role.requester.desc": "የፕሮፎርማ ጥያቄዎችን ያዘጋጃል (ለግዢ ሥራ አስኪያጅ ማጽደቂያ) እና የአቅራቢ ዝርዝርን ይመለከታል",
 
         // Login
         "login.title": "ግባ",

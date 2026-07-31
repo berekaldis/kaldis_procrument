@@ -47,16 +47,16 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
 export const ROLE_LABELS: Record<Role, string> = {
     admin: "Administrator",
-    purchaser: "Purchaser",
+    purchaser: "Purchase Manager",
     finance: "Finance Officer",
-    requester: "Requester",
+    requester: "Proforma Requester",
 };
 
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
     admin: "Full system access — manages users, suppliers, settings & all procurement data",
-    purchaser: "Creates proforma requests, manages suppliers, sends Telegram notifications & reviews proformas",
+    purchaser: "Approves requested proformas to send to selected suppliers via Telegram, manages suppliers & reviews proformas",
     finance: "Reviews, accepts or rejects submitted proformas & monitors procurement activity",
-    requester: "Creates proforma requests & views the supplier directory",
+    requester: "Creates proforma requests for Purchase Manager approval & views the supplier directory",
 };
 
 export function can(role: string, perm: Permission): boolean {

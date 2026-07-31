@@ -52,18 +52,18 @@ Visit http://localhost:8000
 | Role | Email | Password |
 |------|-------|----------|
 | Administrator | admin@kaldicoffee.com | admin123 |
-| Purchaser | selam@kaldicoffee.com | purchaser123 |
+| Purchase Manager | selam@kaldicoffee.com | purchaser123 |
 | Finance Officer | finance@kaldicoffee.com | finance123 |
-| Requester | requester@kaldicoffee.com | requester123 |
+| Proforma Requester | requester@kaldicoffee.com | requester123 |
 
 ## Roles & Permissions
 
 | Role | Permissions |
 |------|-------------|
 | **admin** | All 16 permissions (full access + user management) |
-| **purchaser** | Dashboard, Suppliers (view+manage), Requests (view+create+send+manage), Proformas (view+review), Notifications, Audit |
+| **purchaser** (Purchase Manager) | Dashboard, Suppliers (view+manage), Requests (view+create+send/approve+manage), Proformas (view+review), Notifications, Audit |
 | **finance** | Dashboard, Proformas (view+review), Notifications, Audit |
-| **requester** | Dashboard, Suppliers (view), Requests (view+create), Notifications |
+| **requester** (Proforma Requester) | Dashboard, Suppliers (view), Requests (view+create), Notifications |
 
 ## Features
 
