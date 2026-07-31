@@ -247,9 +247,9 @@ class ProformaRequestController extends Controller
                 'deadline' => $pr->deadline ? $pr->deadline->format('Y-m-d H:i') : 'N/A',
             ]);
 
-            // Dispatched to the queue so the response doesn't block on N sequential
-            // Telegram HTTP round-trips — status flips to "notified" once each job runs.
-            SendProformaRequestToSupplier::dispatch($rs->id, $message);
+            // Dispatched after response so Telegram HTTP round-trips execute immediately
+            // without blocking the HTTP response or requiring a background queue worker.
+            SendProformaRequestToSupplier::dispatchAfterResponse($rs->id, $message);
         }
 
         $pr->update(['status' => 'sent']);
