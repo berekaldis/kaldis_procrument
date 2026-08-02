@@ -21,6 +21,7 @@ class UpdateProformaRequest extends FormRequest
             'items.*.quantity' => ['required_with:items', 'numeric', 'min:0'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],
             'items.*.unitPrice' => ['required_with:items', 'numeric', 'min:0'],
+            'total_amount' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'currency' => ['sometimes', 'string', 'max:8'],
         ];
     }

@@ -81,6 +81,8 @@ class ProformaController extends Controller
         if (isset($validated['items'])) {
             $validated['total_amount'] = collect($validated['items'])
                 ->sum(fn ($i) => (float) $i['quantity'] * (float) $i['unitPrice']);
+        } elseif ($request->has('total_amount') || $request->has('totalAmount')) {
+            $validated['total_amount'] = $request->input('total_amount', $request->input('totalAmount'));
         }
 
         $p->update($validated);

@@ -560,6 +560,7 @@ export function ProformasView() {
                 onOpenChange={setCompareOpen}
                 proformas={compareProformas}
                 onClear={() => setCompareIds([])}
+                onReload={load}
                 onView={(p) => {
                     setCompareOpen(false);
                     openDetail(p);
@@ -712,15 +713,46 @@ function FileIcon({ type, large }) {
     return <File className={s} />;
 }
 
-function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
+function CompareDialog({ open, onOpenChange, proformas, onClear, onView, onReload }) {
     const [viewMode, setViewMode] = useState("unit"); // 'unit' | 'total'
+    const [editingTotalId, setEditingTotalId] = useState(null);
+    const [tempTotalVal, setTempTotalVal] = useState("");
+    const [savingTotal, setSavingTotal] = useState(false);
+    const { toast } = useToast();
+
+    const saveTotal = async (proformaId) => {
+        const num = parseFloat(tempTotalVal);
+        if (isNaN(num) || num < 0) return;
+        setSavingTotal(true);
+        try {
+            await api(`/api/proformas/${proformaId}`, {
+                method: "PATCH",
+                body: JSON.stringify({ total_amount: num }),
+            });
+            toast({ title: "Total amount saved" });
+            setEditingTotalId(null);
+            if (typeof onReload === "function") {
+                onReload();
+            }
+        } catch (e) {
+            toast({ title: "Failed to save total", description: e.message, variant: "destructive" });
+        } finally {
+            setSavingTotal(false);
+        }
+    };
 
     const itemNames = useMemo(() => {
         const seen = [];
         const set = new Set();
         for (const p of proformas) {
             for (const item of p.items || []) {
-                if (!set.has(item.itemName)) {
+                if (item.itemName && !set.has(item.itemName)) {
+                    set.add(item.itemName);
+                    seen.push(item.itemName);
+                }
+            }
+            for (const item of p.request?.items || []) {
+                if (item.itemName && !set.has(item.itemName)) {
                     set.add(item.itemName);
                     seen.push(item.itemName);
                 }
@@ -734,7 +766,8 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
         for (const name of itemNames) {
             let sample = null;
             for (const p of proformas) {
-                const found = (p.items || []).find((i) => i.itemName === name);
+                const found = (p.items || []).find((i) => i.itemName === name) ||
+                    (p.request?.items || []).find((i) => i.itemName === name);
                 if (found) {
                     sample = found;
                     break;
@@ -819,7 +852,7 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
                     const price = Number(item.unitPrice) || 0;
                     row.push(viewMode === "unit" ? price : price * (details.quantity || 1));
                 } else {
-                    row.push("");
+                    row.push(p.filePath ? "Document Quote" : "");
                 }
             }
             lines.push(row);
@@ -953,6 +986,18 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
                                                             <span className="text-[11px] font-normal text-muted-foreground">
                                                                 {p.request.referenceNo}
                                                             </span>
+                                                            {p.filePath && (
+                                                                <a
+                                                                    href={`/${p.filePath}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center gap-1 text-[10px] text-brand-600 hover:underline mt-0.5 font-normal"
+                                                                    title={p.fileName || "View Quotation File"}
+                                                                >
+                                                                    <Paperclip className="h-3 w-3" />
+                                                                    <span className="truncate max-w-[110px]">{p.fileName || "Attached Quote"}</span>
+                                                                </a>
+                                                            )}
                                                         </div>
                                                     </th>
                                                 );
@@ -1016,6 +1061,18 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
                                                                             </span>
                                                                         )}
                                                                     </div>
+                                                                ) : p.filePath ? (
+                                                                    <div className="flex flex-col items-end text-muted-foreground">
+                                                                        <span className="text-[10px] italic">Document Quote</span>
+                                                                        <a
+                                                                            href={`/${p.filePath}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="text-[10px] text-brand-600 hover:underline inline-flex items-center gap-0.5"
+                                                                        >
+                                                                            <Download className="h-3 w-3" /> View File
+                                                                        </a>
+                                                                    </div>
                                                                 ) : (
                                                                     <span className="text-muted-foreground/40">—</span>
                                                                 )}
@@ -1043,15 +1100,40 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
                                                             isWinner && "bg-emerald-100/70 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-200"
                                                         )}
                                                     >
-                                                        <div className="flex flex-col items-end">
+                                                        <div className="flex flex-col items-end gap-1">
                                                             <div className="flex items-center gap-1 font-mono text-sm font-bold text-brand-700 dark:text-gold-300">
                                                                 {isWinner && <Trophy className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
-                                                                {p.totalAmount != null
-                                                                    ? `${fmtMoney(p.totalAmount)} ${p.currency || "ETB"}`
-                                                                    : "—"}
+                                                                {p.totalAmount != null ? (
+                                                                    `${fmtMoney(p.totalAmount)} ${p.currency || "ETB"}`
+                                                                ) : editingTotalId === p.id ? (
+                                                                    <div className="flex items-center gap-1 kaldi-no-print">
+                                                                        <Input
+                                                                            type="number"
+                                                                            placeholder="Total ETB"
+                                                                            className="h-7 w-24 text-xs font-normal"
+                                                                            value={tempTotalVal}
+                                                                            onChange={(e) => setTempTotalVal(e.target.value)}
+                                                                        />
+                                                                        <Button size="sm" className="h-7 px-2 text-xs" disabled={savingTotal} onClick={() => saveTotal(p.id)}>
+                                                                            {savingTotal ? <Spinner className="h-3 w-3" /> : "Save"}
+                                                                        </Button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="h-7 text-xs text-brand-600 hover:text-brand-700 dark:text-gold-400 border-dashed kaldi-no-print"
+                                                                        onClick={() => {
+                                                                            setEditingTotalId(p.id);
+                                                                            setTempTotalVal(p.totalAmount || "");
+                                                                        }}
+                                                                    >
+                                                                        <Plus className="h-3 w-3 mr-1" /> Track Total
+                                                                    </Button>
+                                                                )}
                                                             </div>
                                                             <span className="text-[10px] font-normal text-muted-foreground">
-                                                                {pricedCount}/{itemNames.length} items priced
+                                                                {p.items?.length ? `${pricedCount}/${itemNames.length} items priced` : p.filePath ? "📄 Document Quote" : "No items priced"}
                                                             </span>
                                                         </div>
                                                     </td>
@@ -1063,8 +1145,7 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
                             </div>
                         ) : (
                             <div className="text-sm text-muted-foreground border rounded-xl p-5 bg-muted/20 text-center">
-                                💡 None of the selected proformas have line item pricing entered yet. Open a proforma and use{" "}
-                                <b>Save Pricing</b> to unlock structured item comparison.
+                                💡 Select proformas with line items or attached PDF/photo quotations to compare them side-by-side.
                             </div>
                         )}
 
