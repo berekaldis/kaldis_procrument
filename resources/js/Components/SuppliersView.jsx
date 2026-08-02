@@ -3,6 +3,7 @@ import {
     Building2,
     Plus,
     Search,
+    ChevronDown,
     Pencil,
     Trash2,
     Phone,
@@ -107,6 +108,9 @@ export function SuppliersView() {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [categoriesOpen, setCategoriesOpen] = useState(false);
+    const [definedCategories, setDefinedCategories] = useState([]);
+    const [catSearch, setCatSearch] = useState("");
+    const [catDropdownOpen, setCatDropdownOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [bulkBusy, setBulkBusy] = useState(false);
     const [user, setUser] = useState(null);
@@ -117,6 +121,17 @@ export function SuppliersView() {
             .then((d) => setUser(d.user))
             .catch(() => {});
     }, []);
+
+    const loadCategories = useCallback(async () => {
+        try {
+            const data = await api("/api/categories");
+            setDefinedCategories(data.categories || []);
+        } catch {}
+    }, []);
+
+    useEffect(() => {
+        loadCategories();
+    }, [loadCategories]);
 
     const buildParams = useCallback(() => {
         const params = new URLSearchParams();
@@ -519,133 +534,279 @@ export function SuppliersView() {
             </Card>
             <Pagination meta={meta} onPageChange={setPage} />
 
-            <CategoriesDialog open={categoriesOpen} onOpenChange={setCategoriesOpen} />
+            <CategoriesDialog
+                open={categoriesOpen}
+                onOpenChange={setCategoriesOpen}
+                onChange={loadCategories}
+            />
 
             {/* Create / Edit dialog */}
             <Dialog open={formOpen} onOpenChange={setFormOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto p-6">
                     <DialogHeader>
-                        <DialogTitle>{editing ? "Edit Supplier" : "Add New Supplier"}</DialogTitle>
-                        <DialogDescription>
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                            <Building2 className="h-5 w-5 text-brand-600 dark:text-gold-400" />
+                            {editing ? "Edit Supplier" : "Add New Supplier"}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">
                             {editing
-                                ? "Update supplier information."
-                                : "Register a new supplier. They can be invited to proforma requests once verified."}
+                                ? "Update supplier legal profile, categories, and contact information."
+                                : "Register a new supplier to the procurement database."}
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="grid gap-4 py-2">
-                        <div className="grid sm:grid-cols-2 gap-4">
-                            <Field label="Legal Name *" required>
-                                <Input
-                                    value={form.legalName}
-                                    onChange={(e) => setForm({ ...form, legalName: e.target.value })}
-                                    placeholder="e.g. Biftu Coffee Exporters PLC"
-                                />
-                            </Field>
-                            <Field label="Trade Name">
-                                <Input
-                                    value={form.tradeName}
-                                    onChange={(e) => setForm({ ...form, tradeName: e.target.value })}
-                                    placeholder="e.g. Biftu Coffee"
-                                />
-                            </Field>
-                        </div>
-                        <div className="grid sm:grid-cols-3 gap-4">
-                            <Field label="Trade License No.">
-                                <Input
-                                    value={form.tradeLicenseNo}
-                                    onChange={(e) => setForm({ ...form, tradeLicenseNo: e.target.value })}
-                                />
-                            </Field>
-                            <Field label="TIN">
-                                <Input
-                                    value={form.tin}
-                                    onChange={(e) => setForm({ ...form, tin: e.target.value })}
-                                    placeholder="Taxpayer ID"
-                                />
-                            </Field>
-                            <Field label="VAT No.">
-                                <Input
-                                    value={form.vatNo}
-                                    onChange={(e) => setForm({ ...form, vatNo: e.target.value })}
-                                />
-                            </Field>
-                        </div>
-                        <Field label="Category Tags (comma-separated)">
-                            <Input
-                                value={form.categoryTags}
-                                onChange={(e) => setForm({ ...form, categoryTags: e.target.value })}
-                                placeholder="e.g. Coffee, Beans, Raw Materials"
-                            />
-                        </Field>
-                        <div className="grid sm:grid-cols-3 gap-4">
-                            <Field label="Contact Name">
-                                <Input
-                                    value={form.contactName}
-                                    onChange={(e) => setForm({ ...form, contactName: e.target.value })}
-                                />
-                            </Field>
-                            <Field label="Contact Phone">
-                                <Input
-                                    value={form.contactPhone}
-                                    onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
-                                    placeholder="+251…"
-                                />
-                            </Field>
-                            <Field label="Contact Email">
-                                <Input
-                                    value={form.contactEmail}
-                                    onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
-                                />
-                            </Field>
-                        </div>
-                        <div className="grid sm:grid-cols-2 gap-4">
-                            <Field label="Payment Terms">
-                                <Input
-                                    value={form.paymentTerms}
-                                    onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
-                                    placeholder="e.g. 30 days net"
-                                />
-                            </Field>
-                            <Field label="Verification Status">
-                                <Select
-                                    value={form.verificationStatus}
-                                    onValueChange={(v) => setForm({ ...form, verificationStatus: v })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="unverified">Unverified</SelectItem>
-                                        <SelectItem value="documents_received">Documents Received</SelectItem>
-                                        <SelectItem value="verified">Verified</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </Field>
-                        </div>
-                        <Field label="Bank Details">
-                            <Input
-                                value={form.bankDetails}
-                                onChange={(e) => setForm({ ...form, bankDetails: e.target.value })}
-                                placeholder="Bank, account no."
-                            />
-                        </Field>
-                        <Field label="Notes">
-                            <Textarea
-                                value={form.notes}
-                                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                                rows={2}
-                            />
-                        </Field>
-                    </div>
+                    {(() => {
+                        const selectedCategoryList = (form.categoryTags || "")
+                            .split(",")
+                            .map((t) => t.trim())
+                            .filter(Boolean);
 
-                    <DialogFooter>
+                        const toggleCategoryTag = (catName) => {
+                            let next;
+                            if (selectedCategoryList.includes(catName)) {
+                                next = selectedCategoryList.filter((c) => c !== catName);
+                            } else {
+                                next = [...selectedCategoryList, catName];
+                            }
+                            setForm({ ...form, categoryTags: next.join(", ") });
+                        };
+
+                        return (
+                            <div className="space-y-4 py-2">
+                                {/* Legal Company Name & Trade Name */}
+                                <div className="grid sm:grid-cols-2 gap-4">
+                                    <Field label="Legal Company Name *" required>
+                                        <Input
+                                            value={form.legalName}
+                                            onChange={(e) => setForm({ ...form, legalName: e.target.value })}
+                                            placeholder="e.g. Biftu Coffee Exporters PLC"
+                                        />
+                                    </Field>
+                                    <Field label="Trade Name / Brand">
+                                        <Input
+                                            value={form.tradeName}
+                                            onChange={(e) => setForm({ ...form, tradeName: e.target.value })}
+                                            placeholder="e.g. Biftu Coffee"
+                                        />
+                                    </Field>
+                                </div>
+
+                                {/* Trade License, TIN, VAT */}
+                                <div className="grid sm:grid-cols-3 gap-3">
+                                    <Field label="Trade License No.">
+                                        <Input
+                                            value={form.tradeLicenseNo}
+                                            onChange={(e) => setForm({ ...form, tradeLicenseNo: e.target.value })}
+                                            placeholder="License No."
+                                        />
+                                    </Field>
+                                    <Field label="TIN Number">
+                                        <Input
+                                            value={form.tin}
+                                            onChange={(e) => setForm({ ...form, tin: e.target.value })}
+                                            placeholder="TIN Number"
+                                        />
+                                    </Field>
+                                    <Field label="VAT Number">
+                                        <Input
+                                            value={form.vatNo}
+                                            onChange={(e) => setForm({ ...form, vatNo: e.target.value })}
+                                            placeholder="VAT Number"
+                                        />
+                                    </Field>
+                                </div>
+
+                                {/* Defined Category & Searchable Picker */}
+                                <div className="space-y-1.5 pt-1">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-medium">
+                                            Supplier Categories <span className="text-rose-500">*</span>
+                                        </Label>
+                                        {userCan(user, "suppliers.manage") && (
+                                            <button
+                                                type="button"
+                                                className="text-xs text-brand-600 dark:text-gold-400 hover:underline flex items-center gap-1"
+                                                onClick={() => setCategoriesOpen(true)}
+                                            >
+                                                <Plus className="h-3 w-3" /> Manage Categories
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Selected Badges */}
+                                    {selectedCategoryList.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5 pb-1">
+                                            {selectedCategoryList.map((cat) => (
+                                                <Badge
+                                                    key={cat}
+                                                    variant="secondary"
+                                                    className="px-2 py-0.5 text-xs bg-brand-50 text-brand-700 dark:bg-gold-950 dark:text-gold-300 border border-brand-200 dark:border-gold-800 flex items-center gap-1"
+                                                >
+                                                    <Tag className="h-3 w-3" />
+                                                    {cat}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleCategoryTag(cat)}
+                                                        className="hover:text-rose-600 rounded-full"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Searchable Dropdown */}
+                                    <div className="relative">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                            <Input
+                                                placeholder="Search & select category..."
+                                                value={catSearch}
+                                                onChange={(e) => {
+                                                    setCatSearch(e.target.value);
+                                                    setCatDropdownOpen(true);
+                                                }}
+                                                onFocus={() => setCatDropdownOpen(true)}
+                                                className="pl-8 pr-8 h-9 text-xs"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setCatDropdownOpen(!catDropdownOpen)}
+                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            >
+                                                <ChevronDown className="h-4 w-4" />
+                                            </button>
+                                        </div>
+
+                                        {catDropdownOpen && (
+                                            <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-card border rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto divide-y divide-border">
+                                                {definedCategories.filter((c) =>
+                                                    c.name.toLowerCase().includes(catSearch.toLowerCase())
+                                                ).length === 0 ? (
+                                                    <div className="p-2.5 text-xs text-muted-foreground text-center">
+                                                        No matching category found.
+                                                    </div>
+                                                ) : (
+                                                    definedCategories
+                                                        .filter((c) =>
+                                                            c.name.toLowerCase().includes(catSearch.toLowerCase())
+                                                        )
+                                                        .map((c) => {
+                                                            const isSelected = selectedCategoryList.includes(c.name);
+                                                            return (
+                                                                <button
+                                                                    key={c.id}
+                                                                    type="button"
+                                                                    onClick={() => toggleCategoryTag(c.name)}
+                                                                    className={cn(
+                                                                        "w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors",
+                                                                        isSelected
+                                                                            ? "bg-brand-50 font-medium text-brand-800 dark:bg-gold-950 dark:text-gold-300"
+                                                                            : "hover:bg-accent/50 text-foreground"
+                                                                    )}
+                                                                >
+                                                                    <span className="flex items-center gap-2">
+                                                                        <Tag className="h-3 w-3 opacity-60" />
+                                                                        {c.name}
+                                                                    </span>
+                                                                    {isSelected && (
+                                                                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-600 dark:text-gold-400" />
+                                                                    )}
+                                                                </button>
+                                                            );
+                                                        })
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Verification Status & Payment Terms */}
+                                <div className="grid sm:grid-cols-2 gap-4">
+                                    <Field label="Verification Status">
+                                        <Select
+                                            value={form.verificationStatus}
+                                            onValueChange={(v) => setForm({ ...form, verificationStatus: v })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="unverified">Unverified</SelectItem>
+                                                <SelectItem value="documents_received">Documents Received</SelectItem>
+                                                <SelectItem value="verified">Verified (Can receive RFQs)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </Field>
+                                    <Field label="Payment Terms">
+                                        <Input
+                                            value={form.paymentTerms}
+                                            onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
+                                            placeholder="e.g. 30 days net"
+                                        />
+                                    </Field>
+                                </div>
+
+                                {/* Contact Person, Phone, Email */}
+                                <div className="grid sm:grid-cols-3 gap-3 pt-1 border-t">
+                                    <Field label="Contact Person">
+                                        <Input
+                                            value={form.contactName}
+                                            onChange={(e) => setForm({ ...form, contactName: e.target.value })}
+                                            placeholder="Full name"
+                                        />
+                                    </Field>
+                                    <Field label="Contact Phone">
+                                        <Input
+                                            value={form.contactPhone}
+                                            onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
+                                            placeholder="+251 9..."
+                                        />
+                                    </Field>
+                                    <Field label="Contact Email">
+                                        <Input
+                                            type="email"
+                                            value={form.contactEmail}
+                                            onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
+                                            placeholder="email@supplier.com"
+                                        />
+                                    </Field>
+                                </div>
+
+                                {/* Bank Account & Notes */}
+                                <div className="space-y-3 pt-1 border-t">
+                                    <Field label="Bank Account Details">
+                                        <Input
+                                            value={form.bankDetails}
+                                            onChange={(e) => setForm({ ...form, bankDetails: e.target.value })}
+                                            placeholder="Bank name and account number..."
+                                        />
+                                    </Field>
+                                    <Field label="Internal Notes">
+                                        <Textarea
+                                            value={form.notes}
+                                            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                                            rows={2}
+                                            placeholder="Special remarks..."
+                                        />
+                                    </Field>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    <DialogFooter className="pt-3 border-t">
                         <Button variant="outline" onClick={() => setFormOpen(false)}>
                             Cancel
                         </Button>
-                        <Button onClick={save} disabled={saving}>
-                            {saving && <Spinner className="h-4 w-4 mr-1" />}
-                            {editing ? "Save Changes" : "Create Supplier"}
+                        <Button
+                            onClick={save}
+                            disabled={saving}
+                            className="bg-brand-600 hover:bg-brand-700 dark:bg-gold-500 dark:hover:bg-gold-600 dark:text-slate-950 font-medium"
+                        >
+                            {saving && <Spinner className="h-4 w-4 mr-1.5" />}
+                            {editing ? "Save Changes" : "Register Supplier"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -877,8 +1038,8 @@ function CategoriesDialog({ open, onOpenChange }) {
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
+        <Dialog open={open} onOpenChange={onOpenChange} containerClassName="z-[70]">
+            <DialogContent className="max-w-md z-[70]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Tag className="h-5 w-5 text-brand-600" />

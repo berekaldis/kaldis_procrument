@@ -35,6 +35,10 @@ class PermissionController extends Controller
         'settings.view' => ['label' => 'View settings', 'group' => 'Settings'],
         'settings.manage' => ['label' => 'Manage settings (Telegram, permissions)', 'group' => 'Settings'],
         'users.manage' => ['label' => 'Manage users & roles', 'group' => 'Users'],
+        'categories.manage' => ['label' => 'Manage defined product categories', 'group' => 'Suppliers'],
+        'proformas.compare' => ['label' => 'Compare proforma quotations side-by-side', 'group' => 'Proformas'],
+        'proformas.export' => ['label' => 'Export proformas & comparisons (CSV / PDF)', 'group' => 'Proformas'],
+        'reports.view' => ['label' => 'View procurement analytics & reports', 'group' => 'Dashboard'],
     ];
 
     public function index(): JsonResponse

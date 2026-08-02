@@ -1,48 +1,63 @@
+import { createContext, useContext, useEffect } from "react";
+import { X } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { useEffect } from "react";
 
-export function Dialog({ open, onOpenChange, children }) {
+const DialogContext = createContext(null);
+
+export function Dialog({ open, onOpenChange, children, containerClassName }) {
     useEffect(() => {
         if (!open) return;
-        const onKey = (e) => {
-            if (e.key === "Escape") onOpenChange?.(false);
-        };
-        document.addEventListener("keydown", onKey);
         document.body.style.overflow = "hidden";
         return () => {
-            document.removeEventListener("keydown", onKey);
             document.body.style.overflow = "";
         };
-    }, [open, onOpenChange]);
+    }, [open]);
 
     if (!open) return null;
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6 overflow-y-auto">
-            <div
-                className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm animate-procurement-fade-in"
-                onClick={() => onOpenChange?.(false)}
-            />
-            {children}
-        </div>
+        <DialogContext.Provider value={{ onOpenChange }}>
+            <div className={cn("fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto", containerClassName)}>
+                {/* Backdrop does NOT close modal on click per user requirement — only X button closes */}
+                <div
+                    className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm animate-procurement-fade-in"
+                    aria-hidden="true"
+                />
+                {children}
+            </div>
+        </DialogContext.Provider>
     );
 }
 
-export function DialogContent({ className, children, ...props }) {
+export function DialogContent({ className, children, showClose = true, ...props }) {
+    const ctx = useContext(DialogContext);
+    const handleClose = () => ctx?.onOpenChange?.(false);
+
     return (
         <div
             className={cn(
-                "relative z-10 w-full max-w-lg my-8 rounded-xl border border-border/70 bg-card p-6 shadow-2xl shadow-slate-950/10 animate-procurement-scale-in",
+                "relative z-10 w-full max-w-xl my-auto max-h-[88vh] overflow-y-auto rounded-2xl border border-border/80 bg-card p-6 sm:p-8 shadow-2xl shadow-slate-950/15 animate-procurement-scale-in",
                 className
             )}
             {...props}
         >
+            {showClose && ctx?.onOpenChange && (
+                <button
+                    type="button"
+                    onClick={handleClose}
+                    className="absolute right-4 top-4 rounded-full p-2 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/80 dark:hover:text-rose-400 border border-border/60 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring z-20 shadow-sm"
+                    aria-label="Close modal"
+                    title="Close (Esc)"
+                >
+                    <X className="h-4 w-4" />
+                </button>
+            )}
             {children}
         </div>
     );
 }
 
 export function DialogHeader({ className, ...props }) {
-    return <div className={cn("flex flex-col space-y-1.5 mb-4", className)} {...props} />;
+    return <div className={cn("flex flex-col space-y-1.5 mb-4 pr-6", className)} {...props} />;
 }
 
 export function DialogFooter({ className, ...props }) {

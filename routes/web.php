@@ -26,6 +26,7 @@ use Inertia\Inertia;
 Route::prefix('api')->group(function () {
     // Public
     Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
 
     // Public — hit by Telegram's servers, not the browser. Protected by a
     // secret path segment + secret header instead of session auth.

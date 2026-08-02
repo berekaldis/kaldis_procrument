@@ -713,6 +713,8 @@ function FileIcon({ type, large }) {
 }
 
 function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
+    const [viewMode, setViewMode] = useState("unit"); // 'unit' | 'total'
+
     const itemNames = useMemo(() => {
         const seen = [];
         const set = new Set();
@@ -727,13 +729,32 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
         return seen;
     }, [proformas]);
 
+    const itemDetails = useMemo(() => {
+        const map = {};
+        for (const name of itemNames) {
+            let sample = null;
+            for (const p of proformas) {
+                const found = (p.items || []).find((i) => i.itemName === name);
+                if (found) {
+                    sample = found;
+                    break;
+                }
+            }
+            map[name] = {
+                quantity: sample?.quantity || 1,
+                unit: sample?.unit || "pcs",
+            };
+        }
+        return map;
+    }, [itemNames, proformas]);
+
     const bestPricePerItem = useMemo(() => {
         const map = {};
         for (const name of itemNames) {
             let min = null;
             for (const p of proformas) {
                 const item = (p.items || []).find((i) => i.itemName === name);
-                if (item && (min === null || Number(item.unitPrice) < min)) {
+                if (item && item.unitPrice != null && (min === null || Number(item.unitPrice) < min)) {
                     min = Number(item.unitPrice);
                 }
             }
@@ -742,23 +763,68 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
         return map;
     }, [itemNames, proformas]);
 
-    const pricedProformas = proformas.filter((p) => p.totalAmount != null);
-    const bestTotal = pricedProformas.length
-        ? Math.min(...pricedProformas.map((p) => Number(p.totalAmount)))
-        : null;
-
-    const exportCsv = () => {
-        const header = ["Item", ...proformas.map((p) => p.supplier.legalName)];
-        const lines = [header];
+    const averagePricePerItem = useMemo(() => {
+        const map = {};
         for (const name of itemNames) {
-            const row = [name];
+            let sum = 0;
+            let count = 0;
             for (const p of proformas) {
                 const item = (p.items || []).find((i) => i.itemName === name);
-                row.push(item ? item.unitPrice : "");
+                if (item && item.unitPrice != null) {
+                    sum += Number(item.unitPrice);
+                    count++;
+                }
+            }
+            map[name] = count > 0 ? sum / count : 0;
+        }
+        return map;
+    }, [itemNames, proformas]);
+
+    const pricedProformas = useMemo(
+        () => proformas.filter((p) => p.totalAmount != null && Number(p.totalAmount) > 0),
+        [proformas]
+    );
+
+    const winner = useMemo(() => {
+        if (!pricedProformas.length) return null;
+        let best = pricedProformas[0];
+        for (const p of pricedProformas) {
+            if (Number(p.totalAmount) < Number(best.totalAmount)) {
+                best = p;
+            }
+        }
+        const avg =
+            pricedProformas.reduce((s, p) => s + Number(p.totalAmount), 0) /
+            pricedProformas.length;
+        const savings = avg - Number(best.totalAmount);
+        const savingsPercent = avg > 0 ? ((savings / avg) * 100).toFixed(1) : 0;
+
+        return {
+            proforma: best,
+            savings: savings > 0 ? savings : 0,
+            savingsPercent: savingsPercent > 0 ? savingsPercent : 0,
+            otherCount: pricedProformas.length - 1,
+        };
+    }, [pricedProformas]);
+
+    const exportCsv = () => {
+        const header = ["Item", "Qty", "Unit", ...proformas.map((p) => p.supplier.legalName)];
+        const lines = [header];
+        for (const name of itemNames) {
+            const details = itemDetails[name] || {};
+            const row = [name, details.quantity || 1, details.unit || "pcs"];
+            for (const p of proformas) {
+                const item = (p.items || []).find((i) => i.itemName === name);
+                if (item) {
+                    const price = Number(item.unitPrice) || 0;
+                    row.push(viewMode === "unit" ? price : price * (details.quantity || 1));
+                } else {
+                    row.push("");
+                }
             }
             lines.push(row);
         }
-        lines.push(["Total", ...proformas.map((p) => (p.totalAmount != null ? p.totalAmount : ""))]);
+        lines.push(["Total Cost", "", "", ...proformas.map((p) => (p.totalAmount != null ? p.totalAmount : ""))]);
         const csv = lines.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
@@ -771,74 +837,222 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-7xl w-[95vw] max-h-[92vh] overflow-y-auto">
                 <DialogHeader className="kaldi-no-print">
-                    <DialogTitle className="flex items-center gap-2">
-                        <Columns3 className="h-5 w-5 text-brand-600" />
-                        Proforma Comparison
+                    <DialogTitle className="flex items-center gap-2 text-xl">
+                        <Columns3 className="h-5 w-5 text-brand-600 dark:text-gold-400" />
+                        Proforma Side-by-Side Comparison
                     </DialogTitle>
                     <DialogDescription>
-                        Structured price comparison across {proformas.length} proforma{proformas.length === 1 ? "" : "s"}.
+                        Comparing {proformas.length} proforma quotation{proformas.length === 1 ? "" : "s"} across line items, totals, and supplier terms.
                     </DialogDescription>
                 </DialogHeader>
 
                 {proformas.length === 0 ? (
                     <div className="py-12 text-center text-sm text-muted-foreground">
-                        Select proformas to compare using the grid icon on each card.
+                        Select up to 4 proformas using the compare icon on each card to view side-by-side pricing.
                     </div>
                 ) : (
-                    <div className="kaldi-print-area space-y-5">
+                    <div className="kaldi-print-area space-y-6">
+                        {/* Winner Recommendation Highlight Banner */}
+                        {winner && (
+                            <div className="rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-emerald-50/80 p-4 dark:bg-emerald-950/40 dark:border-emerald-800/80 dark:from-emerald-950/40 dark:to-emerald-900/20 shadow-sm kaldi-no-print">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="flex items-start gap-3">
+                                        <div className="grid place-items-center h-10 w-10 rounded-full bg-emerald-600 text-white dark:bg-emerald-500 shrink-0 shadow-md">
+                                            <Trophy className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                                                    Lowest Quoted Winner
+                                                </span>
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 font-semibold dark:bg-emerald-900 dark:text-emerald-200">
+                                                    Best Value
+                                                </span>
+                                            </div>
+                                            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                                                {winner.proforma.supplier.legalName}
+                                            </h3>
+                                            {winner.savings > 0 && winner.otherCount > 0 && (
+                                                <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
+                                                    💡 Total Quoted Cost: <b>{fmtMoney(winner.proforma.totalAmount)} {winner.proforma.currency || "ETB"}</b> (Saves approx. {fmtMoney(winner.savings)} {winner.proforma.currency || "ETB"} / {winner.savingsPercent}% vs average).
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 self-start sm:self-center"
+                                        onClick={() => onView(winner.proforma)}
+                                    >
+                                        <Eye className="h-3.5 w-3.5 mr-1" />
+                                        Review Winner Proforma
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* View Mode Controls */}
+                        {itemNames.length > 0 && (
+                            <div className="flex items-center justify-between gap-3 flex-wrap kaldi-no-print border-b pb-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-muted-foreground">Matrix Display Mode:</span>
+                                    <div className="flex gap-1 bg-muted p-1 rounded-lg">
+                                        <button
+                                            type="button"
+                                            onClick={() => setViewMode("unit")}
+                                            className={cn(
+                                                "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                                                viewMode === "unit" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                            )}
+                                        >
+                                            Unit Prices
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setViewMode("total")}
+                                            className={cn(
+                                                "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                                                viewMode === "total" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                            )}
+                                        >
+                                            Line Totals (Qty x Unit)
+                                        </button>
+                                    </div>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                    💡 Green highlights represent the best price per item.
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Matrix Table */}
                         {itemNames.length > 0 ? (
-                            <div className="border rounded-lg overflow-x-auto">
-                                <table className="w-full text-sm min-w-[500px]">
-                                    <thead className="bg-muted/50">
-                                        <tr>
-                                            <th className="text-left px-3 py-2 font-medium">Item</th>
-                                            {proformas.map((p) => (
-                                                <th key={p.id} className="text-right px-3 py-2 font-medium whitespace-nowrap">
-                                                    {p.supplier.legalName}
-                                                </th>
-                                            ))}
+                            <div className="border rounded-xl overflow-x-auto bg-card shadow-sm">
+                                <table className="w-full text-xs sm:text-sm min-w-[650px] border-collapse">
+                                    <thead>
+                                        <tr className="bg-muted/60 border-b border-border">
+                                            <th className="text-left px-3 py-3 font-semibold text-foreground w-1/3">
+                                                Requested Line Item
+                                            </th>
+                                            {proformas.map((p) => {
+                                                const isWinner = winner?.proforma?.id === p.id;
+                                                return (
+                                                    <th
+                                                        key={p.id}
+                                                        className={cn(
+                                                            "text-right px-3 py-3 font-semibold whitespace-nowrap border-l border-border/50",
+                                                            isWinner && "bg-emerald-50/50 dark:bg-emerald-950/30"
+                                                        )}
+                                                    >
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="font-bold text-foreground truncate max-w-[160px]">
+                                                                {p.supplier.legalName}
+                                                            </span>
+                                                            <span className="text-[11px] font-normal text-muted-foreground">
+                                                                {p.request.referenceNo}
+                                                            </span>
+                                                        </div>
+                                                    </th>
+                                                );
+                                            })}
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {itemNames.map((name) => (
-                                            <tr key={name} className="border-t border-border">
-                                                <td className="px-3 py-2">{name}</td>
-                                                {proformas.map((p) => {
-                                                    const item = (p.items || []).find((i) => i.itemName === name);
-                                                    const isBest = item && Number(item.unitPrice) === bestPricePerItem[name];
-                                                    return (
-                                                        <td
-                                                            key={p.id}
-                                                            className={cn(
-                                                                "px-3 py-2 text-right tabular-nums",
-                                                                isBest && "bg-emerald-50 text-emerald-800 font-medium dark:bg-emerald-950 dark:text-emerald-300"
-                                                            )}
-                                                        >
-                                                            {item ? fmtMoney(item.unitPrice) : <span className="text-muted-foreground/50">—</span>}
-                                                        </td>
-                                                    );
-                                                })}
-                                            </tr>
-                                        ))}
+                                    <tbody className="divide-y divide-border">
+                                        {itemNames.map((name) => {
+                                            const details = itemDetails[name] || {};
+                                            const avg = averagePricePerItem[name] || 0;
+
+                                            return (
+                                                <tr key={name} className="hover:bg-muted/30 transition-colors">
+                                                    <td className="px-3 py-2.5">
+                                                        <div className="font-medium text-foreground">{name}</div>
+                                                        <div className="text-[11px] text-muted-foreground">
+                                                            Qty: {details.quantity} {details.unit}
+                                                        </div>
+                                                    </td>
+                                                    {proformas.map((p) => {
+                                                        const item = (p.items || []).find((i) => i.itemName === name);
+                                                        const unitPrice = item ? Number(item.unitPrice) : null;
+                                                        const lineTotal = unitPrice != null ? unitPrice * (details.quantity || 1) : null;
+                                                        const isBest = unitPrice != null && unitPrice === bestPricePerItem[name];
+                                                        const displayVal = viewMode === "unit" ? unitPrice : lineTotal;
+
+                                                        const diffVsAvg =
+                                                            unitPrice != null && avg > 0
+                                                                ? (((unitPrice - avg) / avg) * 100).toFixed(0)
+                                                                : null;
+
+                                                        return (
+                                                            <td
+                                                                key={p.id}
+                                                                className={cn(
+                                                                    "px-3 py-2.5 text-right tabular-nums border-l border-border/40",
+                                                                    isBest &&
+                                                                        "bg-emerald-50/90 text-emerald-950 font-semibold dark:bg-emerald-950/70 dark:text-emerald-200"
+                                                                )}
+                                                            >
+                                                                {displayVal != null ? (
+                                                                    <div className="flex flex-col items-end">
+                                                                        <div className="flex items-center gap-1 font-mono">
+                                                                            {isBest && (
+                                                                                <Trophy className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                                            )}
+                                                                            <span>{fmtMoney(displayVal)}</span>
+                                                                        </div>
+                                                                        {diffVsAvg != null && (
+                                                                            <span
+                                                                                className={cn(
+                                                                                    "text-[10px]",
+                                                                                    Number(diffVsAvg) < 0
+                                                                                        ? "text-emerald-600 font-medium dark:text-emerald-400"
+                                                                                        : Number(diffVsAvg) > 0
+                                                                                        ? "text-rose-500"
+                                                                                        : "text-muted-foreground"
+                                                                                )}
+                                                                            >
+                                                                                {Number(diffVsAvg) <= 0 ? `${diffVsAvg}%` : `+${diffVsAvg}%`} vs avg
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-muted-foreground/40">—</span>
+                                                                )}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                     <tfoot>
-                                        <tr className="border-t border-border bg-muted/30">
-                                            <td className="px-3 py-2 font-semibold">Total</td>
+                                        <tr className="border-t-2 border-border bg-muted/50 font-bold">
+                                            <td className="px-3 py-3 text-foreground">
+                                                Total Quoted Cost
+                                            </td>
                                             {proformas.map((p) => {
-                                                const isBest = p.totalAmount != null && Number(p.totalAmount) === bestTotal;
+                                                const isWinner = winner?.proforma?.id === p.id;
+                                                const pricedCount = (p.items || []).filter((i) => i.unitPrice != null).length;
+
                                                 return (
                                                     <td
                                                         key={p.id}
                                                         className={cn(
-                                                            "px-3 py-2 text-right font-semibold tabular-nums",
-                                                            isBest && "text-gold-700 dark:text-gold-300"
+                                                            "px-3 py-3 text-right tabular-nums border-l border-border/50",
+                                                            isWinner && "bg-emerald-100/70 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-200"
                                                         )}
                                                     >
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            {isBest && <Trophy className="h-3.5 w-3.5" />}
-                                                            {p.totalAmount != null ? `${fmtMoney(p.totalAmount)} ${p.currency || "ETB"}` : "—"}
+                                                        <div className="flex flex-col items-end">
+                                                            <div className="flex items-center gap-1 font-mono text-sm font-bold text-brand-700 dark:text-gold-300">
+                                                                {isWinner && <Trophy className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
+                                                                {p.totalAmount != null
+                                                                    ? `${fmtMoney(p.totalAmount)} ${p.currency || "ETB"}`
+                                                                    : "—"}
+                                                            </div>
+                                                            <span className="text-[10px] font-normal text-muted-foreground">
+                                                                {pricedCount}/{itemNames.length} items priced
+                                                            </span>
                                                         </div>
                                                     </td>
                                                 );
@@ -848,52 +1062,67 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
                                 </table>
                             </div>
                         ) : (
-                            <div className="text-sm text-muted-foreground border rounded-lg p-4 bg-muted/20">
-                                None of the selected proformas have structured pricing yet. Open a proforma and use{" "}
-                                <b>Save Pricing</b> to enter item prices.
+                            <div className="text-sm text-muted-foreground border rounded-xl p-5 bg-muted/20 text-center">
+                                💡 None of the selected proformas have line item pricing entered yet. Open a proforma and use{" "}
+                                <b>Save Pricing</b> to unlock structured item comparison.
                             </div>
                         )}
 
+                        {/* Supplier Summary Cards */}
                         <div
                             className="grid gap-4 kaldi-no-print"
                             style={{ gridTemplateColumns: `repeat(${Math.min(proformas.length, 4)}, minmax(0, 1fr))` }}
                         >
-                            {proformas.map((p) => (
-                                <Card key={p.id} className="p-4 flex flex-col">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <ReceivedViaBadge via={p.receivedVia} />
-                                    </div>
-                                    <div className="font-medium text-sm mb-1">{p.supplier.legalName}</div>
-                                    <div className="text-xs text-muted-foreground mb-3">{p.request.referenceNo}</div>
-                                    <div className="space-y-2 text-xs">
-                                        <div>
-                                            <span className="text-muted-foreground">Status:</span>{" "}
+                            {proformas.map((p) => {
+                                const isWinner = winner?.proforma?.id === p.id;
+                                return (
+                                    <Card
+                                        key={p.id}
+                                        className={cn(
+                                            "p-4 flex flex-col transition-all",
+                                            isWinner && "ring-2 ring-emerald-500 bg-emerald-50/10 dark:bg-emerald-950/20"
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <ReceivedViaBadge via={p.receivedVia} />
                                             <ProformaStatusBadge status={p.status} />
                                         </div>
-                                        <div>
-                                            <span className="text-muted-foreground">Received:</span> {fmtDate(p.receivedAt)}
-                                        </div>
-                                        {p.fileName && (
-                                            <div className="flex items-center gap-1">
-                                                <File className="h-3 w-3" />
-                                                <span className="truncate">{p.fileName}</span>
+                                        <div className="font-semibold text-sm mb-0.5 truncate">{p.supplier.legalName}</div>
+                                        <div className="text-xs text-muted-foreground mb-3 truncate">{p.request.referenceNo}</div>
+
+                                        <div className="space-y-1.5 text-xs text-muted-foreground flex-1">
+                                            <div>
+                                                <span className="font-medium text-foreground">Received:</span> {fmtDate(p.receivedAt)}
                                             </div>
-                                        )}
-                                    </div>
-                                    <div className="mt-auto pt-3 flex gap-1">
-                                        {p.filePath && (
-                                            <a href={`/${p.filePath}`} target="_blank" rel="noopener noreferrer" className="flex-1">
-                                                <Button size="sm" variant="outline" className="w-full">
-                                                    <Download className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </a>
-                                        )}
-                                        <Button size="sm" variant="outline" className="flex-1" onClick={() => onView(p)}>
-                                            <Eye className="h-3.5 w-3.5" />
-                                        </Button>
-                                    </div>
-                                </Card>
-                            ))}
+                                            {p.supplier.paymentTerms && (
+                                                <div className="truncate">
+                                                    <span className="font-medium text-foreground">Terms:</span> {p.supplier.paymentTerms}
+                                                </div>
+                                            )}
+                                            {p.fileName && (
+                                                <div className="flex items-center gap-1 truncate text-foreground">
+                                                    <File className="h-3.5 w-3.5 shrink-0 text-brand-600" />
+                                                    <span className="truncate">{p.fileName}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="mt-3 pt-3 border-t flex gap-1.5">
+                                            {p.filePath && (
+                                                <a href={`/${p.filePath}`} target="_blank" rel="noopener noreferrer" className="flex-1">
+                                                    <Button size="sm" variant="outline" className="w-full text-xs">
+                                                        <Download className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </a>
+                                            )}
+                                            <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => onView(p)}>
+                                                <Eye className="h-3.5 w-3.5 mr-1" />
+                                                View
+                                            </Button>
+                                        </div>
+                                    </Card>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -910,7 +1139,7 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView }) {
                             </Button>
                             <Button variant="outline" onClick={() => window.print()}>
                                 <Printer className="h-4 w-4 mr-1" />
-                                Print / Save as PDF
+                                Print / Save PDF
                             </Button>
                         </>
                     )}

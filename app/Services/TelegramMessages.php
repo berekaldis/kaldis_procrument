@@ -65,6 +65,26 @@ class TelegramMessages
         return $template;
     }
 
+    public static function bilingualOutboundRequest(array $replace = []): string
+    {
+        $ref = $replace['ref'] ?? '';
+        $title = $replace['title'] ?? '';
+        $items = $replace['items'] ?? '';
+        $deadline = $replace['deadline'] ?? '';
+
+        $msg = "📦 <b>PROFORMA REQUEST / የፕሮፎርማ ጥያቄ</b>\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "<b>Ref / መለያ ቁጥር:</b> {$ref}\n";
+        $msg .= "<b>Title / ርዕስ:</b> {$title}\n\n";
+        $msg .= "<b>Requested Items / እቃዎች፦</b>\n{$items}\n\n";
+        $msg .= "<b>Deadline / የመጨረሻ ቀን:</b> {$deadline}\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "🇬🇧 Please respond with your quotation (text, PDF, or photo). Thank you!\n";
+        $msg .= "🇪🇹 እባክዎ ዋጋ ማቅረቢያዎን (በጽሑፍ፣ PDF ወይም ፎቶ) ይላኩልን። እናመሰግናለን!";
+
+        return $msg;
+    }
+
     public static function bilingualLanguagePrompt(): string
     {
         return self::get('choose_language', 'en')."\n".self::get('choose_language', 'am');

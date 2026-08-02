@@ -20,6 +20,10 @@ enum Permission: string
     case SETTINGS_VIEW = 'settings_view';
     case SETTINGS_MANAGE = 'settings_manage';
     case USERS_MANAGE = 'users_manage';
+    case CATEGORIES_MANAGE = 'categories_manage';
+    case PROFORMAS_COMPARE = 'proformas_compare';
+    case PROFORMAS_EXPORT = 'proformas_export';
+    case REPORTS_VIEW = 'reports_view';
 
     /**
      * Return the dotted string form (e.g. 'suppliers.manage') used by

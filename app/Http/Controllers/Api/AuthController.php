@@ -62,6 +62,35 @@ class AuthController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate(['email' => 'required|email']);
+        $email = strtolower(trim($request->input('email')));
+        $user = \App\Models\User::where('email', $email)->first();
+
+        if (! $user) {
+            return response()->json(['error' => 'No account found with this email address.'], 442);
+        }
+
+        if (! $user->active) {
+            return response()->json(['error' => 'This account is deactivated. Please contact an administrator.'], 403);
+        }
+
+        $this->audit->log(
+            $user->name,
+            'user',
+            (string) $user->id,
+            'forgot_password_request',
+            "Password reset requested for email: {$user->email}"
+        );
+
+        return response()->json([
+            'ok' => true,
+            'message' => "Password reset request recorded for {$user->email}. Contact Procurement Admin (admin@kaldisbunna.et) or check System Audit log for temporary access.",
+            'contactEmail' => 'admin@kaldisbunna.et',
+        ]);
+    }
+
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();

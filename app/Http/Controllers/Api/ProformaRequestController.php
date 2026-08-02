@@ -240,7 +240,7 @@ class ProformaRequestController extends Controller
                 continue;
             }
 
-            $message = TelegramMessages::get('outbound_request', $supplier->language ?: 'en', [
+            $message = TelegramMessages::bilingualOutboundRequest([
                 'ref' => $pr->reference_no,
                 'title' => $pr->title,
                 'items' => $items,

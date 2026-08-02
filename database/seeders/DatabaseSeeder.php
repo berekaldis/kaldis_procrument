@@ -25,10 +25,10 @@ class DatabaseSeeder extends Seeder
         );
 
         $users = [
-            ['name' => 'Aster Girmay', 'email' => 'admin@kaldicoffee.com', 'password' => 'admin123', 'role' => 'admin'],
-            ['name' => 'Selam Bekele', 'email' => 'selam@kaldicoffee.com', 'password' => 'purchaser123', 'role' => 'purchaser'],
-            ['name' => 'Bereket Lemma', 'email' => 'finance@kaldicoffee.com', 'password' => 'finance123', 'role' => 'finance'],
-            ['name' => 'Hana Tesfaye', 'email' => 'requester@kaldicoffee.com', 'password' => 'requester123', 'role' => 'requester'],
+            ['name' => 'Aster Girmay', 'email' => 'admin@kaldisbunna.et', 'password' => 'admin123', 'role' => 'admin'],
+            ['name' => 'Selam Bekele', 'email' => 'selam@kaldisbunna.et', 'password' => 'purchaser123', 'role' => 'purchaser'],
+            ['name' => 'Bereket Lemma', 'email' => 'finance@kaldisbunna.et', 'password' => 'finance123', 'role' => 'finance'],
+            ['name' => 'Hana Tesfaye', 'email' => 'requester@kaldisbunna.et', 'password' => 'requester123', 'role' => 'requester'],
         ];
 
         foreach ($users as $u) {

@@ -3,6 +3,8 @@ import {
     FileText,
     Plus,
     Search,
+    ChevronDown,
+    X,
     Trash2,
     Send,
     ArrowLeft,
@@ -583,6 +585,7 @@ function CreateRequestDialog({
     onCreated,
 }) {
     const { toast } = useToast();
+    const [step, setStep] = useState(1); // Step 1: Details & Items, Step 2: Suppliers & Review
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [deadline, setDeadline] = useState(() => {
@@ -596,6 +599,8 @@ function CreateRequestDialog({
     const [saving, setSaving] = useState(false);
     const [categories, setCategories] = useState([]);
     const [categoryFilter, setCategoryFilter] = useState("all");
+    const [supplierSearch, setSupplierSearch] = useState("");
+    const [supplierDropdownOpen, setSupplierDropdownOpen] = useState(false);
 
     useEffect(() => {
         if (open) {
@@ -604,6 +609,7 @@ function CreateRequestDialog({
     }, [open]);
 
     const reset = () => {
+        setStep(1);
         setTitle("");
         setDescription("");
         setDeadline(() => {
@@ -613,6 +619,8 @@ function CreateRequestDialog({
         setItems([{ itemName: "", description: "", quantity: 1, unit: "pcs" }]);
         setSelectedSuppliers([]);
         setCategoryFilter("all");
+        setSupplierSearch("");
+        setSupplierDropdownOpen(false);
     };
 
     const verifiedSuppliers = suppliers
@@ -622,6 +630,17 @@ function CreateRequestDialog({
             const tags = (s.categoryTags || "").split(",").map((t) => t.trim().toLowerCase());
             return tags.includes(categoryFilter.toLowerCase());
         });
+
+    const filteredSuppliers = verifiedSuppliers.filter((s) => {
+        if (!supplierSearch.trim()) return true;
+        const q = supplierSearch.toLowerCase();
+        return (
+            s.legalName.toLowerCase().includes(q) ||
+            (s.contactName || "").toLowerCase().includes(q) ||
+            (s.tin || "").toLowerCase().includes(q) ||
+            (s.categoryTags || "").toLowerCase().includes(q)
+        );
+    });
 
     const addItem = () =>
         setItems([...items, { itemName: "", description: "", quantity: 1, unit: "pcs" }]);
@@ -635,11 +654,24 @@ function CreateRequestDialog({
         );
 
     const selectAllVerified = () => {
-        if (selectedSuppliers.length === verifiedSuppliers.length) {
+        if (selectedSuppliers.length === verifiedSuppliers.length && verifiedSuppliers.length > 0) {
             setSelectedSuppliers([]);
         } else {
             setSelectedSuppliers(verifiedSuppliers.map((s) => s.id));
         }
+    };
+
+    const handleNext = () => {
+        if (!title.trim()) {
+            toast({ title: "Title is required", variant: "destructive" });
+            return;
+        }
+        const validItems = items.filter((it) => it.itemName.trim());
+        if (validItems.length === 0) {
+            toast({ title: "Add at least one item", variant: "destructive" });
+            return;
+        }
+        setStep(2);
     };
 
     const save = async () => {
@@ -693,6 +725,8 @@ function CreateRequestDialog({
         }
     };
 
+    const validItemCount = items.filter((it) => it.itemName.trim()).length;
+
     return (
         <Dialog
             open={open}
@@ -701,208 +735,285 @@ function CreateRequestDialog({
                 if (!v) reset();
             }}
         >
-            <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto p-6">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-brand-600" />
-                        New Proforma Request
+                    <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                        <FileText className="h-5 w-5 text-brand-600 dark:text-gold-400" />
+                        Create Proforma Request (RFQ)
                     </DialogTitle>
-                    <DialogDescription>
-                        Create a request and select suppliers to notify via Telegram. The request is saved as a
-                        draft — you can review it before sending.
+                    <DialogDescription className="text-xs text-muted-foreground">
+                        Define RFQ title, line items, and select verified suppliers to invite via Telegram.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-5 py-2">
-                    {/* Basics */}
-                    <div className="grid gap-4">
+                <div className="space-y-5 py-2">
+                    {/* RFQ General Info */}
+                    <div className="grid gap-3.5">
                         <div>
-                            <Label className="text-xs font-medium mb-1.5 block">Title *</Label>
+                            <Label className="text-xs font-medium mb-1 block">RFQ Title <span className="text-rose-500">*</span></Label>
                             <Input
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                placeholder="e.g. Coffee beans supply — Q3 2026"
+                                placeholder="e.g. Coffee Beans Supply — Q3 2026 Procurement"
                             />
                         </div>
-                        <div>
-                            <Label className="text-xs font-medium mb-1.5 block">Description / Notes</Label>
-                            <Textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                rows={2}
-                                placeholder="Additional context for suppliers…"
-                            />
-                        </div>
-                        <div>
-                            <Label className="text-xs font-medium mb-1.5 block">Response Deadline *</Label>
-                            <Input
-                                type="datetime-local"
-                                value={deadline}
-                                onChange={(e) => setDeadline(e.target.value)}
-                            />
+                        <div className="grid sm:grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-xs font-medium mb-1 block">Response Deadline <span className="text-rose-500">*</span></Label>
+                                <Input
+                                    type="datetime-local"
+                                    value={deadline}
+                                    onChange={(e) => setDeadline(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs font-medium mb-1 block">Description / Notes (Optional)</Label>
+                                <Input
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    placeholder="Special instructions or specifications for suppliers…"
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Items */}
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <Label className="text-xs font-medium flex items-center gap-1.5">
-                                <Package className="h-3.5 w-3.5" />
-                                Requested Items *
+                    {/* Line Items Section */}
+                    <div className="space-y-2.5 pt-2 border-t">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-brand-700 dark:text-gold-400 flex items-center gap-1.5">
+                                <Package className="h-4 w-4" />
+                                Requested Line Items ({items.length})
                             </Label>
-                            <Button size="sm" variant="outline" onClick={addItem} className="h-7">
+                            <Button size="sm" variant="outline" onClick={addItem} className="h-7 text-xs">
                                 <Plus className="h-3.5 w-3.5 mr-1" />
-                                Add item
+                                Add Item
                             </Button>
                         </div>
+
                         <div className="space-y-2">
                             {items.map((it, i) => (
-                                <Card key={i} className="p-3">
+                                <Card key={i} className="p-3 border bg-card">
                                     <div className="flex items-start gap-2">
-                                        <div className="grid place-items-center h-6 w-6 rounded-full bg-brand-50 text-brand-700 text-xs font-medium shrink-0 mt-1">
+                                        <div className="grid place-items-center h-5 w-5 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-800 dark:text-brand-200 text-[11px] font-bold shrink-0 mt-2">
                                             {i + 1}
                                         </div>
-                                        <div className="flex-1 grid gap-2 sm:grid-cols-[2fr_1fr_1fr]">
+                                        <div className="flex-1 space-y-1.5">
+                                            <div className="grid gap-2 sm:grid-cols-[2.5fr_1fr_1fr]">
+                                                <Input
+                                                    placeholder="Item Name / Product *"
+                                                    value={it.itemName}
+                                                    onChange={(e) => updateItem(i, "itemName", e.target.value)}
+                                                    className="font-medium h-9"
+                                                />
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    step="any"
+                                                    placeholder="Quantity"
+                                                    value={it.quantity}
+                                                    onChange={(e) => updateItem(i, "quantity", e.target.value)}
+                                                    className="h-9"
+                                                />
+                                                <Input
+                                                    placeholder="Unit (kg, pcs, L)"
+                                                    value={it.unit}
+                                                    onChange={(e) => updateItem(i, "unit", e.target.value)}
+                                                    className="h-9"
+                                                />
+                                            </div>
                                             <Input
-                                                placeholder="Item name *"
-                                                value={it.itemName}
-                                                onChange={(e) => updateItem(i, "itemName", e.target.value)}
-                                            />
-                                            <Input
-                                                type="number"
-                                                min="0"
-                                                step="any"
-                                                placeholder="Qty"
-                                                value={it.quantity}
-                                                onChange={(e) => updateItem(i, "quantity", e.target.value)}
-                                            />
-                                            <Input
-                                                placeholder="Unit (kg, pcs, L)"
-                                                value={it.unit}
-                                                onChange={(e) => updateItem(i, "unit", e.target.value)}
+                                                placeholder="Detailed specification / packaging requirement (optional)"
+                                                value={it.description}
+                                                onChange={(e) => updateItem(i, "description", e.target.value)}
+                                                className="text-xs h-8"
                                             />
                                         </div>
                                         {items.length > 1 && (
                                             <Button
                                                 size="icon"
                                                 variant="ghost"
-                                                className="h-8 w-8 text-rose-600"
+                                                className="h-8 w-8 text-rose-600 hover:text-rose-700 shrink-0 mt-1"
                                                 onClick={() => removeItem(i)}
+                                                title="Remove line item"
                                             >
-                                                <Trash2 className="h-3.5 w-3.5" />
+                                                <Trash2 className="h-4 w-4" />
                                             </Button>
                                         )}
                                     </div>
-                                    <Input
-                                        className="mt-2"
-                                        placeholder="Spec / description (optional)"
-                                        value={it.description}
-                                        onChange={(e) => updateItem(i, "description", e.target.value)}
-                                    />
                                 </Card>
                             ))}
                         </div>
                     </div>
 
-                    {/* Suppliers */}
-                    <div>
-                        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                            <Label className="text-xs font-medium flex items-center gap-1.5">
-                                <Building2 className="h-3.5 w-3.5" />
-                                Select Suppliers * ({selectedSuppliers.length} selected)
+                    {/* Target Suppliers Section (Searchable Dropdown Combobox) */}
+                    <div className="space-y-2.5 pt-2 border-t">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-brand-700 dark:text-gold-400 flex items-center gap-1.5">
+                                <Building2 className="h-4 w-4" />
+                                Select Suppliers to Invite <span className="text-rose-500">*</span> ({selectedSuppliers.length} selected)
                             </Label>
                             <Button
                                 size="sm"
-                                variant="ghost"
+                                variant="outline"
                                 onClick={selectAllVerified}
                                 className="h-7 text-xs"
                             >
                                 {selectedSuppliers.length === verifiedSuppliers.length && verifiedSuppliers.length > 0
-                                    ? "Deselect all"
-                                    : "Select all verified"}
+                                    ? "Deselect All"
+                                    : "Select All Verified"}
                             </Button>
                         </div>
+
+                        {/* Category Filter Chips */}
                         {categories.length > 0 && (
-                            <div className="flex items-center gap-2 mb-2">
-                                <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                                    <SelectTrigger className="h-8 text-xs w-full sm:w-56">
-                                        <SelectValue placeholder="Filter by category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All categories</SelectItem>
-                                        {categories.map((c) => (
-                                            <SelectItem key={c.id} value={c.name}>
-                                                {c.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                            <div className="flex flex-wrap gap-1.5 py-0.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setCategoryFilter("all")}
+                                    className={cn(
+                                        "px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all border",
+                                        categoryFilter === "all"
+                                            ? "bg-brand-600 text-white border-brand-600 shadow-sm dark:bg-gold-500 dark:text-slate-950"
+                                            : "bg-card text-muted-foreground border-border hover:border-brand-300"
+                                    )}
+                                >
+                                    All Categories
+                                </button>
+                                {categories.map((c) => {
+                                    const isSelected = categoryFilter === c.name;
+                                    return (
+                                        <button
+                                            key={c.id}
+                                            type="button"
+                                            onClick={() => setCategoryFilter(c.name)}
+                                            className={cn(
+                                                "px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all border",
+                                                isSelected
+                                                    ? "bg-brand-600 text-white border-brand-600 shadow-sm dark:bg-gold-500 dark:text-slate-950"
+                                                    : "bg-card text-muted-foreground border-border hover:border-brand-300"
+                                            )}
+                                        >
+                                            {c.name}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
-                        <p className="text-xs text-muted-foreground mb-2">
-                            <Sparkles className="h-3 w-3 inline mr-1" />
-                            Only verified suppliers are shown (governance policy)
-                            {categoryFilter !== "all" && <> tagged <b>{categoryFilter}</b></>}. {verifiedSuppliers.length} available.
-                        </p>
-                        <ScrollArea className="h-56 rounded-md border">
-                            <div className="p-2 space-y-1">
-                                {verifiedSuppliers.length === 0 ? (
-                                    <div className="p-4 text-center text-sm text-muted-foreground">
-                                        No verified suppliers yet. Verify suppliers first.
-                                    </div>
-                                ) : (
-                                    verifiedSuppliers.map((s) => {
-                                        const checked = selectedSuppliers.includes(s.id);
-                                        return (
-                                            <label
-                                                key={s.id}
-                                                className={cn(
-                                                    "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors",
-                                                    checked ? "bg-brand-50" : "hover:bg-accent/50"
-                                                )}
+
+                        {/* Selected Supplier Badges */}
+                        {selectedSuppliers.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 border rounded-lg max-h-24 overflow-y-auto">
+                                {selectedSuppliers.map((id) => {
+                                    const s = suppliers.find((sup) => sup.id === id);
+                                    if (!s) return null;
+                                    return (
+                                        <Badge
+                                            key={id}
+                                            variant="secondary"
+                                            className="px-2 py-1 text-xs bg-brand-50 text-brand-800 dark:bg-gold-950 dark:text-gold-300 border border-brand-200 dark:border-gold-800 flex items-center gap-1.5"
+                                        >
+                                            <Building2 className="h-3 w-3 opacity-70" />
+                                            <span className="font-semibold">{s.legalName}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSupplier(id)}
+                                                className="hover:text-rose-600 rounded-full"
+                                                title="Remove supplier"
                                             >
-                                                <Checkbox
-                                                    checked={checked}
-                                                    onCheckedChange={() => toggleSupplier(s.id)}
-                                                />
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="text-sm font-medium truncate">{s.legalName}</div>
-                                                    <div className="text-xs text-muted-foreground truncate">
-                                                        {s.contactName || "—"} · {s.tin || "no TIN"}
-                                                    </div>
-                                                </div>
-                                                {s.telegramChatId ? (
-                                                    <Badge variant="outline" className="text-[10px] py-0 bg-cyan-50 text-cyan-700 border-cyan-200">
-                                                        Telegram
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="outline" className="text-[10px] py-0 text-muted-foreground">
-                                                        No Telegram
-                                                    </Badge>
-                                                )}
-                                            </label>
-                                        );
-                                    })
-                                )}
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
+                                    );
+                                })}
                             </div>
-                        </ScrollArea>
-                        {selectedSuppliers.length > 0 && selectedSuppliers.length < 3 && (
-                            <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                                <AlertTriangle className="h-3 w-3" />
-                                Governance recommends at least 3 suppliers per RFQ.
-                            </p>
                         )}
+
+                        {/* Searchable Combobox Dropdown Input */}
+                        <div className="relative">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                <Input
+                                    placeholder="Search & select verified suppliers by name, TIN, or category..."
+                                    value={supplierSearch}
+                                    onChange={(e) => {
+                                        setSupplierSearch(e.target.value);
+                                        setSupplierDropdownOpen(true);
+                                    }}
+                                    onFocus={() => setSupplierDropdownOpen(true)}
+                                    className="pl-9 pr-9 h-10 text-xs font-medium"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setSupplierDropdownOpen(!supplierDropdownOpen)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    <ChevronDown className="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            {/* Dropdown Options List */}
+                            {supplierDropdownOpen && (
+                                <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-card border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-border">
+                                    {filteredSuppliers.length === 0 ? (
+                                        <div className="p-4 text-xs text-muted-foreground text-center">
+                                            No verified suppliers match your search.
+                                        </div>
+                                    ) : (
+                                        filteredSuppliers.map((s) => {
+                                            const checked = selectedSuppliers.includes(s.id);
+                                            return (
+                                                <button
+                                                    key={s.id}
+                                                    type="button"
+                                                    onClick={() => toggleSupplier(s.id)}
+                                                    className={cn(
+                                                        "w-full text-left p-2.5 text-xs flex items-center justify-between transition-colors",
+                                                        checked
+                                                            ? "bg-brand-50/80 font-medium text-brand-900 dark:bg-gold-950/60 dark:text-gold-300"
+                                                            : "hover:bg-accent/50 text-foreground"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                                        <Checkbox
+                                                            checked={checked}
+                                                            onCheckedChange={() => toggleSupplier(s.id)}
+                                                        />
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="font-semibold truncate">{s.legalName}</div>
+                                                            <div className="text-[11px] text-muted-foreground truncate">
+                                                                {s.contactName ? `Contact: ${s.contactName}` : "No contact name"} · TIN: {s.tin || "N/A"}
+                                                                {s.categoryTags && ` · ${s.categoryTags}`}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="shrink-0 pl-2">
+                                                        {s.telegramChatId ? (
+                                                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950 dark:text-cyan-300">
+                                                                Telegram
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground">
+                                                                Manual
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="pt-3 border-t">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancel
                     </Button>
-                    <Button onClick={save} disabled={saving}>
-                        {saving && <Spinner className="h-4 w-4 mr-1" />}
-                        Create Draft
+                    <Button onClick={save} disabled={saving} className="bg-brand-600 hover:bg-brand-700 dark:bg-gold-500 dark:hover:bg-gold-600 dark:text-slate-950 font-medium">
+                        {saving && <Spinner className="h-4 w-4 mr-1.5" />}
+                        Create Proforma Request ({selectedSuppliers.length} Suppliers)
                     </Button>
                 </DialogFooter>
             </DialogContent>

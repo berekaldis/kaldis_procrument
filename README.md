@@ -51,10 +51,10 @@ Visit http://localhost:8000
 
 | Role | Email | Password |
 |------|-------|----------|
-| Administrator | admin@kaldicoffee.com | admin123 |
-| Purchase Manager | selam@kaldicoffee.com | purchaser123 |
-| Finance Officer | finance@kaldicoffee.com | finance123 |
-| Proforma Requester | requester@kaldicoffee.com | requester123 |
+| Administrator | admin@kaldisbunna.et | admin123 |
+| Purchase Manager | selam@kaldisbunna.et | purchaser123 |
+| Finance Officer | finance@kaldisbunna.et | finance123 |
+| Proforma Requester | requester@kaldisbunna.et | requester123 |
 
 ## Roles & Permissions
 

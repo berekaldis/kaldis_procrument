@@ -513,7 +513,7 @@ export function UsersView({ currentUser }) {
 
             {/* Add / Edit Dialog */}
             <Dialog open={formOpen} onOpenChange={(o) => !saving && setFormOpen(o)}>
-                <DialogContent className="sm:max-w-[480px]">
+                <DialogContent className="sm:max-w-[560px] max-h-[85vh] overflow-y-auto p-6">
                     <DialogHeader>
                         <DialogTitle>{editing ? "Edit user" : "Add a new user"}</DialogTitle>
                         <DialogDescription>
@@ -546,7 +546,7 @@ export function UsersView({ currentUser }) {
                                 type="email"
                                 value={form.email}
                                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                placeholder="selam@kaldiscoffee.com"
+                                placeholder="selam@kaldisbunna.et"
                                 disabled={!!editing}
                                 className={editing ? "bg-muted/50 text-muted-foreground" : ""}
                             />
