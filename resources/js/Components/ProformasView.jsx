@@ -359,53 +359,64 @@ export function ProformasView() {
             )}
             <Pagination meta={meta} onPageChange={setPage} />
 
-            {/* Detail sheet */}
-            <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
-                <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-                    {detail && (
+            {/* Detail dialog */}
+            <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+                <DialogContent className="sm:max-w-3xl max-h-[88vh] overflow-y-auto">
+                    {detail ? (
                         <>
-                            <SheetHeader>
-                                <SheetTitle className="flex items-center gap-2 flex-wrap">
-                                    <span>Proforma from {detail.supplier.legalName}</span>
-                                </SheetTitle>
-                                <SheetDescription className="flex items-center gap-2 flex-wrap">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                                    <FileText className="h-5 w-5 text-brand-600 dark:text-gold-400" />
+                                    <span>Proforma Quotation — {detail.supplier?.legalName}</span>
+                                </DialogTitle>
+                                <DialogDescription className="flex items-center gap-2 flex-wrap text-xs mt-1">
                                     <ReceivedViaBadge via={detail.receivedVia} />
                                     <ProformaStatusBadge status={detail.status} />
-                                    <span className="text-xs">{timeAgo(detail.receivedAt)}</span>
-                                </SheetDescription>
-                            </SheetHeader>
+                                    <span className="text-xs text-muted-foreground">• Received {timeAgo(detail.receivedAt)}</span>
+                                </DialogDescription>
+                            </DialogHeader>
 
-                            <div className="mt-6 space-y-5">
-                                <Card className="p-4 bg-muted/30">
-                                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                                        For Request
+                            <div className="space-y-5 my-2">
+                                <Card className="p-4 bg-muted/30 border-muted">
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1 font-semibold">
+                                        Associated Request
                                     </div>
-                                    <div className="font-mono text-sm font-medium text-brand-700 dark:text-gold-300">
-                                        {detail.request.referenceNo}
+                                    <div className="font-mono text-sm font-bold text-brand-700 dark:text-gold-300">
+                                        {detail.request?.referenceNo}
                                     </div>
-                                    <div className="text-sm">{detail.request.title}</div>
+                                    <div className="text-sm font-medium">{detail.request?.title}</div>
                                     <div className="text-xs text-muted-foreground mt-1">
-                                        Deadline: {fmtDate(detail.request.deadline)}
+                                        Deadline: {fmtDate(detail.request?.deadline)}
                                     </div>
                                 </Card>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Card className="p-3">
-                                        <div className="text-xs text-muted-foreground">Supplier</div>
-                                        <div className="text-sm font-medium">{detail.supplier.legalName}</div>
-                                        {detail.supplier.tradeName && (
-                                            <div className="text-xs text-muted-foreground">{detail.supplier.tradeName}</div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <Card className="p-3.5">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Supplier Details</div>
+                                        <div className="text-sm font-semibold text-foreground">{detail.supplier?.legalName}</div>
+                                        {detail.supplier?.tradeName && (
+                                            <div className="text-xs text-muted-foreground">{detail.supplier?.tradeName}</div>
+                                        )}
+                                        {detail.supplier?.phone && (
+                                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                                <PhoneCall className="h-3 w-3" /> {detail.supplier?.phone}
+                                            </div>
                                         )}
                                     </Card>
-                                    <Card className="p-3">
-                                        <div className="text-xs text-muted-foreground">Received</div>
-                                        <div className="text-sm font-medium">{fmtDate(detail.receivedAt)}</div>
+                                    <Card className="p-3.5">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Quotation Metadata</div>
+                                        <div className="text-sm font-semibold text-foreground">
+                                            Total: {detail.totalAmount != null ? `${fmtMoney(detail.totalAmount)} ${detail.currency || "ETB"}` : "Unpriced Document"}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground mt-0.5">
+                                            Received: {fmtDate(detail.receivedAt)}
+                                        </div>
                                     </Card>
                                 </div>
 
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
                                             Priced Line Items
                                         </div>
                                         {userCan(user, "proformas.review") && (
@@ -426,12 +437,12 @@ export function ProformasView() {
 
                                 {detail.filePath ? (
                                     <div>
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
-                                            Attachment
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2 font-semibold">
+                                            Attachment Document
                                         </div>
                                         <Card className="p-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="grid place-items-center h-12 w-12 rounded-lg bg-gold-50 text-gold-700 dark:bg-gold-900/40 dark:text-gold-300">
+                                                <div className="grid place-items-center h-11 w-11 rounded-lg bg-gold-50 text-gold-700 dark:bg-gold-900/40 dark:text-gold-300 shrink-0">
                                                     <FileIcon type={detail.fileType} large />
                                                 </div>
                                                 <div className="min-w-0 flex-1">
@@ -446,16 +457,16 @@ export function ProformasView() {
                                                 </a>
                                             </div>
                                             {detail.fileType?.startsWith("image/") && (
-                                                <div className="mt-3 rounded-md overflow-hidden border">
+                                                <div className="mt-3 rounded-xl overflow-hidden border bg-muted/20">
                                                     <img
                                                         src={`/${detail.filePath}`}
                                                         alt={detail.fileName || "proforma"}
-                                                        className="w-full h-auto"
+                                                        className="w-full h-auto max-h-[450px] object-contain mx-auto"
                                                     />
                                                 </div>
                                             )}
                                             {detail.fileType === "application/pdf" && (
-                                                <div className="mt-3 rounded-md overflow-hidden border h-96">
+                                                <div className="mt-3 rounded-xl overflow-hidden border h-96 bg-muted/20">
                                                     <iframe
                                                         src={`/${detail.filePath}`}
                                                         className="w-full h-full"
@@ -467,18 +478,18 @@ export function ProformasView() {
                                     </div>
                                 ) : (
                                     <div>
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
-                                            Message
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2 font-semibold">
+                                            Supplier Message
                                         </div>
                                         <Card className="p-4">
-                                            <p className="text-sm whitespace-pre-wrap">{detail.message || "(no message)"}</p>
+                                            <p className="text-sm whitespace-pre-wrap">{detail.message || "(no message text)"}</p>
                                         </Card>
                                     </div>
                                 )}
 
                                 {detail.filePath && detail.message && (
                                     <div>
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1 font-semibold">
                                             Caption / Message
                                         </div>
                                         <Card className="p-3 bg-muted/30">
@@ -502,10 +513,10 @@ export function ProformasView() {
 
                                 {userCan(user, "proformas.review") && (
                                     <div className="pt-3 border-t">
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2 font-semibold">
                                             Update Status
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <div className="grid grid-cols-3 gap-2">
                                             <Button
                                                 variant={detail.status === "reviewed" ? "default" : "outline"}
                                                 onClick={() => setStatus("reviewed")}
@@ -524,7 +535,7 @@ export function ProformasView() {
                                             <Button
                                                 variant={detail.status === "rejected" ? "default" : "outline"}
                                                 onClick={() => setStatus("rejected")}
-                                                className={cn("col-span-2", detail.status === "rejected" && "bg-rose-600 text-white hover:bg-rose-700")}
+                                                className={cn(detail.status === "rejected" && "bg-rose-600 text-white hover:bg-rose-700")}
                                             >
                                                 <XCircle className="h-4 w-4 mr-1" />
                                                 Reject
@@ -533,15 +544,20 @@ export function ProformasView() {
                                     </div>
                                 )}
                             </div>
+                            <DialogFooter className="mt-4">
+                                <Button variant="outline" onClick={() => setDetailOpen(false)}>
+                                    Close
+                                </Button>
+                            </DialogFooter>
                         </>
-                    )}
-                    {!detail && (
-                        <div className="h-full grid place-items-center">
-                            <Spinner className="h-6 w-6 text-muted-foreground" />
+                    ) : (
+                        <div className="py-12 text-center text-sm text-muted-foreground">
+                            <Spinner className="h-6 w-6 inline mr-2" />
+                            Loading details…
                         </div>
                     )}
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
 
             {/* Manual entry dialog */}
             <ManualEntryDialog

@@ -1,0 +1,1 @@
+import{j as t}from"./app-DHSZmSEX.js";import{i as o}from"./App-cl4rsq9I.js";function m({className:e,...s}){return t.jsx("div",{className:o("animate-pulse rounded-md bg-slate-200/70",e),...s})}export{m as S};
