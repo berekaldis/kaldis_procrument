@@ -40,13 +40,6 @@ import {
     DialogDescription,
 } from "./ui/dialog.jsx";
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "./ui/sheet.jsx";
-import {
     Select,
     SelectContent,
     SelectItem,
@@ -350,23 +343,20 @@ export function RequestsView({ onNavigate }) {
                 }}
             />
 
-            {/* Detail sheet */}
-            <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
-                <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+            {/* Detail dialog */}
+            <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+                <DialogContent className="sm:max-w-3xl max-h-[88vh] overflow-y-auto">
                     {detail ? (
                         <>
-                            <SheetHeader className="kaldi-no-print">
-                                <div className="flex items-center justify-between gap-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 px-2 -ml-2 text-xs text-muted-foreground"
-                                        onClick={() => setDetailOpen(false)}
-                                    >
-                                        <ArrowLeft className="h-3.5 w-3.5" />
-                                        Back
-                                    </Button>
-                                    <div className="flex items-center gap-1">
+                            <DialogHeader>
+                                <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-brand-700 bg-brand-50 dark:bg-gold-950 dark:text-gold-300 px-2 py-0.5 rounded text-sm font-bold">
+                                            {detail.referenceNo}
+                                        </span>
+                                        <RequestStatusBadge status={detail.status} />
+                                    </div>
+                                    <div className="flex items-center gap-1 kaldi-no-print">
                                         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={printRequest}>
                                             <Printer className="h-3.5 w-3.5 mr-1" />
                                             Print
@@ -379,40 +369,34 @@ export function RequestsView({ onNavigate }) {
                                         )}
                                     </div>
                                 </div>
-                                <SheetTitle className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-mono text-brand-700 bg-brand-50 px-2 py-0.5 rounded text-sm">
-                                        {detail.referenceNo}
-                                    </span>
-                                    <RequestStatusBadge status={detail.status} />
-                                </SheetTitle>
-                                <SheetDescription className="text-base font-medium text-foreground">
+                                <DialogTitle className="text-xl font-bold text-foreground">
                                     {detail.title}
-                                </SheetDescription>
-                            </SheetHeader>
+                                </DialogTitle>
+                            </DialogHeader>
 
-                            <div className="mt-6 space-y-5 kaldi-print-area">
+                            <div className="space-y-5 my-2 kaldi-print-area">
                                 <div className="hidden print:block mb-4">
                                     <div className="font-mono text-lg font-semibold">{detail.referenceNo}</div>
                                     <div className="text-base">{detail.title}</div>
                                 </div>
                                 {detail.description && (
-                                    <div>
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                                    <Card className="p-3.5 bg-muted/30">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1 font-semibold">
                                             Description
                                         </div>
                                         <p className="text-sm whitespace-pre-wrap">{detail.description}</p>
-                                    </div>
+                                    </Card>
                                 )}
 
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Card className="p-3">
-                                        <div className="text-xs text-muted-foreground">Requested by</div>
-                                        <div className="text-sm font-medium">{detail.requestedBy}</div>
+                                    <Card className="p-3.5">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide">Requested by</div>
+                                        <div className="text-sm font-semibold text-foreground mt-0.5">{detail.requestedBy}</div>
                                     </Card>
-                                    <Card className="p-3">
-                                        <div className="text-xs text-muted-foreground">Deadline</div>
+                                    <Card className="p-3.5">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide">Deadline</div>
                                         <div className={cn(
-                                            "text-sm font-medium flex items-center gap-1",
+                                            "text-sm font-semibold flex items-center gap-1 mt-0.5",
                                             isOverdue(detail.deadline) && "text-rose-600"
                                         )}>
                                             <Calendar className="h-3.5 w-3.5" />
@@ -426,24 +410,24 @@ export function RequestsView({ onNavigate }) {
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
                                         <Package className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium text-sm">Requested Items ({detail.items.length})</h3>
+                                        <h3 className="font-semibold text-sm">Requested Items ({detail.items.length})</h3>
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="grid sm:grid-cols-2 gap-2">
                                         {detail.items.map((it, i) => (
                                             <Card key={it.id} className="p-3">
                                                 <div className="flex items-start gap-3">
-                                                    <div className="grid place-items-center h-7 w-7 rounded-full bg-brand-50 text-brand-700 text-xs font-medium shrink-0">
+                                                    <div className="grid place-items-center h-7 w-7 rounded-full bg-brand-50 text-brand-700 dark:bg-gold-950 dark:text-gold-300 text-xs font-bold shrink-0">
                                                         {i + 1}
                                                     </div>
                                                     <div className="min-w-0 flex-1">
-                                                        <div className="font-medium text-sm">{it.itemName}</div>
+                                                        <div className="font-semibold text-sm">{it.itemName}</div>
                                                         {it.description && (
                                                             <div className="text-xs text-muted-foreground mt-0.5">
                                                                 {it.description}
                                                             </div>
                                                         )}
                                                         <div className="text-xs text-muted-foreground mt-0.5">
-                                                            <span className="font-medium text-foreground">{it.quantity}</span> {it.unit}
+                                                            <span className="font-bold text-foreground">{it.quantity}</span> {it.unit}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -456,14 +440,14 @@ export function RequestsView({ onNavigate }) {
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
                                         <Building2 className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium text-sm">
+                                        <h3 className="font-semibold text-sm">
                                             Invited Suppliers ({detail.suppliers.length})
                                         </h3>
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="grid sm:grid-cols-2 gap-2">
                                         {detail.suppliers.map((rs) => (
                                             <Card key={rs.id} className="p-3 flex items-center gap-3">
-                                                <div className="grid place-items-center h-8 w-8 rounded-full bg-muted text-xs font-medium shrink-0">
+                                                <div className="grid place-items-center h-8 w-8 rounded-full bg-muted text-xs font-bold shrink-0">
                                                     {rs.supplier.legalName.charAt(0)}
                                                 </div>
                                                 <div className="min-w-0 flex-1">
@@ -488,11 +472,11 @@ export function RequestsView({ onNavigate }) {
                                     <div>
                                         <div className="flex items-center gap-2 mb-2">
                                             <Inbox className="h-4 w-4 text-muted-foreground" />
-                                            <h3 className="font-medium text-sm">
+                                            <h3 className="font-semibold text-sm">
                                                 Proformas Received ({detail.proformas.length})
                                             </h3>
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="grid sm:grid-cols-2 gap-2">
                                             {detail.proformas.map((p) => (
                                                 <Card
                                                     key={p.id}
@@ -549,14 +533,21 @@ export function RequestsView({ onNavigate }) {
                                     )}
                                 </div>
                             </div>
+
+                            <DialogFooter className="mt-4">
+                                <Button variant="outline" onClick={() => setDetailOpen(false)}>
+                                    Close
+                                </Button>
+                            </DialogFooter>
                         </>
                     ) : (
-                        <div className="h-full grid place-items-center">
-                            <Spinner className="h-6 w-6 text-muted-foreground" />
+                        <div className="py-12 text-center text-sm text-muted-foreground">
+                            <Spinner className="h-6 w-6 inline mr-2" />
+                            Loading request details…
                         </div>
                     )}
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

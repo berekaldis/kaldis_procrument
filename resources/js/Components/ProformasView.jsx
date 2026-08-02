@@ -26,13 +26,6 @@ import { Textarea } from "./ui/textarea.jsx";
 import { Label } from "./ui/label.jsx";
 import { EmptyState } from "./ui/empty-state.jsx";
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "./ui/sheet.jsx";
-import {
     Dialog,
     DialogContent,
     DialogHeader,

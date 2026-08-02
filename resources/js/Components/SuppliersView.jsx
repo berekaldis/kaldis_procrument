@@ -44,13 +44,7 @@ import {
     DialogFooter,
     DialogDescription,
 } from "./ui/dialog.jsx";
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "./ui/sheet.jsx";
+
 import {
     Select,
     SelectContent,
@@ -812,144 +806,146 @@ export function SuppliersView() {
                 </DialogContent>
             </Dialog>
 
-            {/* Detail drawer */}
-            <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
-                <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-                    <SheetHeader>
-                        <SheetTitle className="flex items-center gap-2">
-                            <Building className="h-5 w-5 text-brand-600" />
-                            {detail?.legalName}
-                        </SheetTitle>
-                        <SheetDescription>{detail?.tradeName}</SheetDescription>
-                    </SheetHeader>
-
+            {/* Detail dialog */}
+            <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+                <DialogContent className="sm:max-w-3xl max-h-[88vh] overflow-y-auto">
                     {detail && (
-                        <div className="mt-6 space-y-5">
-                            <Card className="p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div>
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                                            Verification
-                                        </div>
-                                        <div className="mt-1">
-                                            <VerificationBadge status={detail.verificationStatus} />
-                                        </div>
-                                    </div>
-                                </div>
-                                {userCan(user, "suppliers.verify") ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        <Button
-                                            size="sm"
-                                            variant={detail.verificationStatus === "verified" ? "default" : "outline"}
-                                            onClick={() => setVerification(detail, "verified")}
-                                        >
-                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                                            Mark Verified
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant={detail.verificationStatus === "documents_received" ? "default" : "outline"}
-                                            onClick={() => setVerification(detail, "documents_received")}
-                                        >
-                                            <FileCheck className="h-3.5 w-3.5 mr-1" />
-                                            Docs Received
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant={detail.verificationStatus === "unverified" ? "default" : "outline"}
-                                            onClick={() => setVerification(detail, "unverified")}
-                                        >
-                                            <XCircle className="h-3.5 w-3.5 mr-1" />
-                                            Unverified
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-muted-foreground">
-                                        You do not have permission to change verification status.
-                                    </p>
-                                )}
-                                <p className="text-xs text-muted-foreground mt-3">
-                                    Only verified suppliers can be invited to proforma requests (Phase 1 policy).
-                                </p>
-                            </Card>
+                        <>
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                                    <Building className="h-5 w-5 text-brand-600 dark:text-gold-400" />
+                                    <span>{detail.legalName}</span>
+                                </DialogTitle>
+                                <DialogDescription className="flex items-center gap-2 flex-wrap text-xs mt-1">
+                                    <VerificationBadge status={detail.verificationStatus} />
+                                    {detail.tradeName && <span>• {detail.tradeName}</span>}
+                                </DialogDescription>
+                            </DialogHeader>
 
-                            <div className="space-y-3">
-                                <InfoRow icon={Hash} label="TIN" value={detail.tin} />
-                                <InfoRow icon={Hash} label="VAT No." value={detail.vatNo} />
-                                <InfoRow icon={FileCheck} label="Trade License" value={detail.tradeLicenseNo} />
-                                <InfoRow icon={Phone} label="Contact Phone" value={detail.contactPhone} />
-                                <InfoRow icon={Mail} label="Contact Email" value={detail.contactEmail} />
-                                <InfoRow icon={Building} label="Contact Name" value={detail.contactName} />
-                                <InfoRow icon={CreditCard} label="Payment Terms" value={detail.paymentTerms} />
-                                <InfoRow icon={CreditCard} label="Bank Details" value={detail.bankDetails} />
-                                {detail.telegramChatId && (
-                                    <InfoRow
-                                        icon={Link2}
-                                        label="Telegram"
-                                        value={`Linked · @${detail.telegramUsername || detail.telegramChatId} · ${detail.language === "am" ? "አማርኛ" : "English"}`}
-                                    />
-                                )}
-                            </div>
-
-                            {detail.notes && (
+                            <div className="space-y-4 my-2">
                                 <Card className="p-4 bg-muted/30">
-                                    <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground uppercase tracking-wide">
-                                        <StickyNote className="h-3.5 w-3.5" />
-                                        Notes
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
+                                            Verification Status
+                                        </div>
                                     </div>
-                                    <p className="text-sm whitespace-pre-wrap">{detail.notes}</p>
+                                    {userCan(user, "suppliers.verify") ? (
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant={detail.verificationStatus === "verified" ? "default" : "outline"}
+                                                onClick={() => setVerification(detail, "verified")}
+                                                className={detail.verificationStatus === "verified" ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}
+                                            >
+                                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                                                Mark Verified
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant={detail.verificationStatus === "documents_received" ? "default" : "outline"}
+                                                onClick={() => setVerification(detail, "documents_received")}
+                                            >
+                                                <FileCheck className="h-3.5 w-3.5 mr-1" />
+                                                Docs Received
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant={detail.verificationStatus === "unverified" ? "default" : "outline"}
+                                                onClick={() => setVerification(detail, "unverified")}
+                                            >
+                                                <XCircle className="h-3.5 w-3.5 mr-1" />
+                                                Unverified
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground">
+                                            You do not have permission to change verification status.
+                                        </p>
+                                    )}
                                 </Card>
-                            )}
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <Card className="p-4 text-center">
-                                    <div className="text-2xl font-semibold">{detail.proformaCount}</div>
-                                    <div className="text-xs text-muted-foreground">Proformas submitted</div>
-                                </Card>
-                                <Card className="p-4 text-center">
-                                    <div className="text-2xl font-semibold">{detail.requestCount}</div>
-                                    <div className="text-xs text-muted-foreground">Requests invited to</div>
-                                </Card>
+                                <div className="grid sm:grid-cols-2 gap-3">
+                                    <InfoRow icon={Hash} label="TIN" value={detail.tin} />
+                                    <InfoRow icon={Hash} label="VAT No." value={detail.vatNo} />
+                                    <InfoRow icon={FileCheck} label="Trade License" value={detail.tradeLicenseNo} />
+                                    <InfoRow icon={Phone} label="Contact Phone" value={detail.contactPhone} />
+                                    <InfoRow icon={Mail} label="Contact Email" value={detail.contactEmail} />
+                                    <InfoRow icon={Building} label="Contact Name" value={detail.contactName} />
+                                    <InfoRow icon={CreditCard} label="Payment Terms" value={detail.paymentTerms} />
+                                    <InfoRow icon={CreditCard} label="Bank Details" value={detail.bankDetails} />
+                                    {detail.telegramChatId && (
+                                        <InfoRow
+                                            icon={Link2}
+                                            label="Telegram"
+                                            value={`Linked · @${detail.telegramUsername || detail.telegramChatId} · ${detail.language === "am" ? "አማርኛ" : "English"}`}
+                                        />
+                                    )}
+                                </div>
+
+                                {detail.notes && (
+                                    <Card className="p-4 bg-muted/30">
+                                        <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground uppercase tracking-wide font-semibold">
+                                            <StickyNote className="h-3.5 w-3.5" />
+                                            Notes
+                                        </div>
+                                        <p className="text-sm whitespace-pre-wrap">{detail.notes}</p>
+                                    </Card>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Card className="p-3.5 text-center">
+                                        <div className="text-xl font-bold text-brand-700 dark:text-gold-400">{detail.proformaCount}</div>
+                                        <div className="text-xs text-muted-foreground">Proformas submitted</div>
+                                    </Card>
+                                    <Card className="p-3.5 text-center">
+                                        <div className="text-xl font-bold text-brand-700 dark:text-gold-400">{detail.requestCount}</div>
+                                        <div className="text-xs text-muted-foreground">Requests invited to</div>
+                                    </Card>
+                                </div>
+
+                                {detail.categoryTags && (
+                                    <div>
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2 font-semibold">
+                                            Categories
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {detail.categoryTags.split(",").map((t, i) => (
+                                                <Badge key={i} variant="secondary">
+                                                    {t.trim()}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <DocumentsSection
+                                    supplier={detail}
+                                    canManage={userCan(user, "suppliers.manage")}
+                                    onChange={(docs) => setDetail({ ...detail, documents: docs })}
+                                />
                             </div>
 
-                            {detail.categoryTags && (
-                                <div>
-                                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
-                                        Categories
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {detail.categoryTags.split(",").map((t, i) => (
-                                            <Badge key={i} variant="secondary">
-                                                {t.trim()}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <DocumentsSection
-                                supplier={detail}
-                                canManage={userCan(user, "suppliers.manage")}
-                                onChange={(docs) => setDetail({ ...detail, documents: docs })}
-                            />
-
-                            {userCan(user, "suppliers.manage") && (
-                                <Button
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => {
-                                        setDetailOpen(false);
-                                        openEdit(detail);
-                                    }}
-                                >
-                                    <Pencil className="h-4 w-4 mr-1" />
-                                    Edit Supplier
+                            <DialogFooter className="mt-4 flex items-center justify-between gap-2">
+                                {userCan(user, "suppliers.manage") && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setDetailOpen(false);
+                                            openEdit(detail);
+                                        }}
+                                    >
+                                        <Pencil className="h-4 w-4 mr-1" />
+                                        Edit Supplier
+                                    </Button>
+                                )}
+                                <Button variant="outline" onClick={() => setDetailOpen(false)}>
+                                    Close
                                 </Button>
-                            )}
-                        </div>
+                            </DialogFooter>
+                        </>
                     )}
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
 
             {/* Delete confirm */}
             <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
