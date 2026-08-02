@@ -292,6 +292,70 @@ class TelegramWebhookController extends Controller
         $this->ingestSubmission($supplier, $pr, $reconstructed, $payload['text'] ?? '', $lang);
     }
 
+    private function extractPricedItems(ProformaRequest $pr, string $text): array
+    {
+        $pr->loadMissing('items');
+        $reqItems = $pr->items;
+        if (! $reqItems || $reqItems->isEmpty()) {
+            return ['items' => [], 'total_amount' => null];
+        }
+
+        $parsedPrices = [];
+
+        // Pattern 1: Explicit line numbers (e.g. "1: 450", "2: 120", "1 - 450", "1=450", "Item 1: 450")
+        preg_match_all('/(?:item\s*)?(\d+)[\s:=\-]+([0-9]+(?:\.[0-9]{1,2})?)/i', $text, $matches, PREG_SET_ORDER);
+        if (! empty($matches)) {
+            foreach ($matches as $m) {
+                $lineNum = (int) $m[1];
+                $price = (float) $m[2];
+                if ($lineNum >= 1 && $lineNum <= $reqItems->count()) {
+                    $parsedPrices[$lineNum - 1] = $price;
+                }
+            }
+        }
+
+        // Pattern 2: If no explicit line numbers matched, extract numeric values separated by commas, spaces, or lines
+        if (empty($parsedPrices)) {
+            preg_match_all('/(?:ETB\s*)?([0-9]+(?:\.[0-9]{1,2})?)(?:\s*ETB)?/i', $text, $numMatches);
+            if (! empty($numMatches[1])) {
+                $numbers = array_map('floatval', $numMatches[1]);
+                if (count($numbers) === $reqItems->count()) {
+                    foreach ($numbers as $idx => $val) {
+                        $parsedPrices[$idx] = $val;
+                    }
+                }
+            }
+        }
+
+        if (empty($parsedPrices)) {
+            return ['items' => [], 'total_amount' => null];
+        }
+
+        $itemsList = [];
+        $totalAmount = 0.0;
+
+        foreach ($reqItems->values() as $idx => $reqItem) {
+            $unitPrice = $parsedPrices[$idx] ?? 0.0;
+            $qty = (float) $reqItem->quantity;
+            $lineTotal = $qty * $unitPrice;
+            $totalAmount += $lineTotal;
+
+            $itemsList[] = [
+                'itemName' => $reqItem->item_name,
+                'description' => $reqItem->description,
+                'quantity' => $qty,
+                'unit' => $reqItem->unit,
+                'unitPrice' => $unitPrice,
+                'totalPrice' => $lineTotal,
+            ];
+        }
+
+        return [
+            'items' => $itemsList,
+            'total_amount' => $totalAmount > 0 ? $totalAmount : null,
+        ];
+    }
+
     private function ingestSubmission(Supplier $supplier, ProformaRequest $pr, array $message, string $text, string $lang): void
     {
         $filePath = null;
@@ -314,7 +378,9 @@ class TelegramWebhookController extends Controller
             [$filePath, $fileName, $fileType] = $this->persistDownload($download, 'jpg');
         }
 
-        $proforma = $this->ingest->receive($pr, $supplier, [
+        $extracted = $this->extractPricedItems($pr, $text);
+
+        $attributes = [
             'reference_no' => 'TG-'.strtoupper(substr(md5(uniqid('', true)), 0, 8)),
             'message' => $text !== '' ? $text : null,
             'file_path' => $filePath,
@@ -322,12 +388,40 @@ class TelegramWebhookController extends Controller
             'file_type' => $fileType,
             'telegram_message_id' => (string) ($message['message_id'] ?? ''),
             'received_via' => 'telegram',
-        ], $supplier->legal_name.' (via Telegram)');
+        ];
 
-        $this->telegram->sendRaw(
-            $supplier->telegram_chat_id,
-            TelegramMessages::get('received_confirmation', $lang, ['ref' => $pr->reference_no, 'title' => $pr->title]),
-        );
+        if (! empty($extracted['items'])) {
+            $attributes['items'] = $extracted['items'];
+            $attributes['total_amount'] = $extracted['total_amount'];
+        }
+
+        $proforma = $this->ingest->receive($pr, $supplier, $attributes, $supplier->legal_name.' (via Telegram)');
+
+        if (! empty($extracted['items']) && $extracted['total_amount'] > 0) {
+            $itemBreakdown = '';
+            foreach ($extracted['items'] as $i => $item) {
+                $num = $i + 1;
+                $uPrice = number_format($item['unitPrice'], 2);
+                $tPrice = number_format($item['totalPrice'], 2);
+                $itemBreakdown .= "{$num}️⃣ <b>{$item['itemName']}</b> ({$item['quantity']} {$item['unit']}) × {$uPrice} ETB = <b>{$tPrice} ETB</b>\n";
+            }
+
+            $confirmText = "✅ <b>PROFORMA QUOTE RECEIVED & PRICED! / የፕሮፎርማ ዋጋ ገብቷል!</b>\n";
+            $confirmText .= "━━━━━━━━━━━━━━━━━━━━━━\n";
+            $confirmText .= "<b>Ref / መለያ ቁጥር:</b> {$pr->reference_no}\n";
+            $confirmText .= "<b>Title / ርዕስ:</b> {$pr->title}\n\n";
+            $confirmText .= "💰 <b>Priced Line Items / የዋጋ ዝርዝር፦</b>\n{$itemBreakdown}\n";
+            $confirmText .= "💵 <b>Total Amount / ጠቅላላ ዋጋ:</b> <b>".number_format($extracted['total_amount'], 2)." ETB</b>\n";
+            $confirmText .= "━━━━━━━━━━━━━━━━━━━━━━\n";
+            $confirmText .= "🇪🇹 እናመሰግናለን! የፕሮፎርማ ዋጋዎ በግዢ ሥርዓት ውስጥ ተመዝግቧል።";
+
+            $this->telegram->sendRaw($supplier->telegram_chat_id, $confirmText);
+        } else {
+            $this->telegram->sendRaw(
+                $supplier->telegram_chat_id,
+                TelegramMessages::get('received_confirmation', $lang, ['ref' => $pr->reference_no, 'title' => $pr->title]),
+            );
+        }
 
         Log::info('Telegram proforma received', ['proforma_id' => $proforma->id, 'supplier_id' => $supplier->id]);
     }

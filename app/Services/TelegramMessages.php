@@ -76,11 +76,15 @@ class TelegramMessages
         $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
         $msg .= "<b>Ref / መለያ ቁጥር:</b> {$ref}\n";
         $msg .= "<b>Title / ርዕስ:</b> {$title}\n\n";
-        $msg .= "<b>Requested Items / እቃዎች፦</b>\n{$items}\n\n";
+        $msg .= "<b>Requested Line Items / የተጠየቁ ዕቃዎች፦</b>\n{$items}\n\n";
         $msg .= "<b>Deadline / የመጨረሻ ቀን:</b> {$deadline}\n";
         $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-        $msg .= "🇬🇧 Please respond with your quotation (text, PDF, or photo). Thank you!\n";
-        $msg .= "🇪🇹 እባክዎ ዋጋ ማቅረቢያዎን (በጽሑፍ፣ PDF ወይም ፎቶ) ይላኩልን። እናመሰግናለን!";
+        $msg .= "💰 <b>HOW TO SUBMIT PRICES / ዋጋ ለማስገባት፦</b>\n";
+        $msg .= "Reply to this message with your unit prices (in ETB):\n";
+        $msg .= "• Example format: <code>1: 450, 2: 120</code>\n";
+        $msg .= "• Or simply type: <code>450, 120</code>\n";
+        $msg .= "• Or attach a PDF / Photo quotation document!\n\n";
+        $msg .= "🇪🇹 እባክዎ የእያንዳንዱን እቃ የነጠላ ዋጋ በጽሁፍ (ምሳሌ፦ 1: 450, 2: 120)፣ በPDF ወይም በፎቶ ይላኩ። እናመሰግናለን!";
 
         return $msg;
     }

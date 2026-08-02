@@ -232,7 +232,7 @@ class ProformaRequestController extends Controller
             ], 422);
         }
 
-        $items = $pr->items->map(fn ($i) => sprintf('• %s — %s %s', $i->item_name, $i->quantity, $i->unit))->implode("\n");
+        $items = $pr->items->values()->map(fn ($i, $idx) => sprintf('%d️⃣ <b>%s</b> (%s %s)', $idx + 1, $i->item_name, $i->quantity, $i->unit))->implode("\n");
 
         foreach ($pr->requestSuppliers as $rs) {
             $supplier = $rs->supplier;
