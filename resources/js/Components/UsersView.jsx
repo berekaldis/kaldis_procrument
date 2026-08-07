@@ -488,7 +488,8 @@ export function UsersView({ currentUser }) {
                                                     <Clock className="h-3.5 w-3.5" />
                                                     {formatRelativeTime(u.lastLoginAt)}
                                                 </span>
-                                            </TableC                                             <TableCell className="text-right pr-4">
+                                            </TableCell>
+                                            <TableCell className="text-right pr-4">
                                                 <div className="flex items-center justify-end gap-1">
                                                     <Button
                                                         variant="ghost"
@@ -549,7 +550,7 @@ export function UsersView({ currentUser }) {
                                                         </Button>
                                                     )}
                                                 </div>
-                                            </TableCell>Cell>
+                                            </TableCell>
                                         </TableRow>
                                     );
                                 })
