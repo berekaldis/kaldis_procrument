@@ -109,6 +109,7 @@ export function SuppliersView() {
     const [catDropdownOpen, setCatDropdownOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [bulkBusy, setBulkBusy] = useState(false);
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
     const [user, setUser] = useState(null);
     const { toast } = useToast();
@@ -200,7 +201,13 @@ export function SuppliersView() {
                 method: "POST",
                 body: JSON.stringify({ ids: selectedIds, action }),
             });
-            toast({ title: `Updated ${res.count} supplier(s)` });
+            toast({
+                title: action === "delete"
+                    ? `Deleted ${res.count} supplier(s)`
+                    : `Updated ${res.count} supplier(s)`
+            });
+            setSelectedIds([]);
+            setBulkDeleteOpen(false);
             await load();
         } catch (e) {
             toast({ title: "Bulk action failed", description: e.message, variant: "destructive" });
@@ -391,6 +398,16 @@ export function SuppliersView() {
                     <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkAction("deactivate")}>
                         <Ban className="h-3.5 w-3.5 mr-1" />
                         Deactivate
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-rose-600 border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-950/50 dark:border-rose-900 font-medium"
+                        disabled={bulkBusy}
+                        onClick={() => setBulkDeleteOpen(true)}
+                    >
+                        <Trash2 className="h-3.5 w-3.5 mr-1 text-rose-600" />
+                        Delete Selected ({selectedIds.length})
                     </Button>
                     <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setSelectedIds([])}>
                         Clear
@@ -981,6 +998,36 @@ export function SuppliersView() {
                         >
                             {deleting && <Spinner className="h-4 w-4 mr-1" />}
                             Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Bulk Delete confirmation */}
+            <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-rose-600 flex items-center gap-2">
+                            <Trash2 className="h-5 w-5 text-rose-600" /> Delete {selectedIds.length} Supplier(s)?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2 text-sm text-muted-foreground">
+                            <span>
+                                Are you sure you want to permanently delete <strong className="text-foreground font-semibold">{selectedIds.length} selected supplier record(s)</strong>?
+                            </span>
+                            <span className="block text-xs text-rose-600 dark:text-rose-400 font-medium">
+                                ⚠️ This action will permanently remove all selected suppliers and cannot be undone.
+                            </span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel disabled={bulkBusy}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => bulkAction("delete")}
+                            disabled={bulkBusy}
+                            className="bg-rose-600 text-white hover:bg-rose-700 font-medium"
+                        >
+                            {bulkBusy && <Spinner className="h-4 w-4 mr-1" />}
+                            Delete {selectedIds.length} Supplier(s)
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

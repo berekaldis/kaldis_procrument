@@ -164,7 +164,7 @@ class SupplierController extends Controller
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:suppliers,id'],
-            'action' => ['required', 'in:verify,documents_received,unverify,activate,deactivate'],
+            'action' => ['required', 'in:verify,documents_received,unverify,activate,deactivate,delete'],
         ]);
 
         $verificationActions = ['verify' => 'verified', 'documents_received' => 'documents_received', 'unverify' => 'unverified'];
@@ -173,11 +173,13 @@ class SupplierController extends Controller
         if (isset($verificationActions[$data['action']]) && ! $user->canPermission(Permission::SUPPLIERS_VERIFY)) {
             return response()->json(['error' => 'Forbidden — this action requires the suppliers.verify permission.'], 403);
         }
-        if (in_array($data['action'], ['activate', 'deactivate'], true) && ! $user->canPermission(Permission::SUPPLIERS_MANAGE)) {
+        if (in_array($data['action'], ['activate', 'deactivate', 'delete'], true) && ! $user->canPermission(Permission::SUPPLIERS_MANAGE)) {
             return response()->json(['error' => 'Forbidden — this action requires the suppliers.manage permission.'], 403);
         }
 
-        if (isset($verificationActions[$data['action']])) {
+        if ($data['action'] === 'delete') {
+            Supplier::whereIn('id', $data['ids'])->delete();
+        } elseif (isset($verificationActions[$data['action']])) {
             Supplier::whereIn('id', $data['ids'])->update(['verification_status' => $verificationActions[$data['action']]]);
         } else {
             Supplier::whereIn('id', $data['ids'])->update(['active' => $data['action'] === 'activate']);
