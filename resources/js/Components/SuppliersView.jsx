@@ -351,7 +351,7 @@ export function SuppliersView() {
                     <FileSpreadsheet className="h-4 w-4 mr-1" />
                     Export CSV
                 </Button>
-                {userCan(user, "suppliers.manage") && (
+                {userCan(user, "suppliers.import") && (
                     <Button variant="outline" onClick={() => setImportOpen(true)} className="shrink-0 text-emerald-700 border-emerald-300 dark:text-emerald-400 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50">
                         <Upload className="h-4 w-4 mr-1" />
                         Import Excel

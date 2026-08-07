@@ -23,6 +23,7 @@ class PermissionController extends Controller
         'suppliers.view' => ['label' => 'View suppliers', 'group' => 'Suppliers'],
         'suppliers.manage' => ['label' => 'Create / edit / delete suppliers', 'group' => 'Suppliers'],
         'suppliers.verify' => ['label' => 'Verify suppliers', 'group' => 'Suppliers'],
+        'suppliers.import' => ['label' => 'Import suppliers from Excel / CSV', 'group' => 'Suppliers'],
         'requests.view' => ['label' => 'View proforma requests', 'group' => 'Proforma Requests'],
         'requests.create' => ['label' => 'Create proforma requests', 'group' => 'Proforma Requests'],
         'requests.send' => ['label' => 'Send requests to suppliers', 'group' => 'Proforma Requests'],

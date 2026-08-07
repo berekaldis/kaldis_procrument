@@ -74,7 +74,7 @@ Route::prefix('api')->group(function () {
             ->whereNumber('id')->middleware('permission:suppliers.verify');
         Route::post('/suppliers/bulk-action', [SupplierController::class, 'bulkAction']);
         Route::post('/suppliers/import', [SupplierController::class, 'import'])
-            ->middleware('permission:suppliers.manage');
+            ->middleware('permission:suppliers.import');
         Route::post('/suppliers/{id}/documents', [SupplierDocumentController::class, 'store'])
             ->whereNumber('id')->middleware('permission:suppliers.manage');
         Route::delete('/suppliers/{id}/documents/{documentId}', [SupplierDocumentController::class, 'destroy'])

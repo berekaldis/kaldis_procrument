@@ -8,6 +8,7 @@ enum Permission: string
     case SUPPLIERS_VIEW = 'suppliers_view';
     case SUPPLIERS_MANAGE = 'suppliers_manage';
     case SUPPLIERS_VERIFY = 'suppliers_verify';
+    case SUPPLIERS_IMPORT = 'suppliers_import';
     case REQUESTS_VIEW = 'requests_view';
     case REQUESTS_CREATE = 'requests_create';
     case REQUESTS_SEND = 'requests_send';

@@ -62,6 +62,7 @@ class RoleService
                 Permission::DASHBOARD_VIEW,
                 Permission::SUPPLIERS_VIEW,
                 Permission::SUPPLIERS_MANAGE,
+                Permission::SUPPLIERS_IMPORT,
                 Permission::REQUESTS_VIEW,
                 Permission::REQUESTS_CREATE,
                 Permission::REQUESTS_SEND,
