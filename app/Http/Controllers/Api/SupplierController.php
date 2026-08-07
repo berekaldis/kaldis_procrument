@@ -7,10 +7,12 @@ use App\Http\Controllers\Concerns\Paginates;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Requests\UpdateSupplierRequest;
+use App\Models\Category;
 use App\Models\Supplier;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SupplierController extends Controller
 {
@@ -190,6 +192,114 @@ class SupplierController extends Controller
         );
 
         return response()->json(['ok' => true, 'count' => count($data['ids'])]);
+    }
+
+    public function import(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'duplicateMode' => ['nullable', 'string', 'in:skip,update,create_always'],
+            'suppliers' => ['required', 'array', 'min:1'],
+            'suppliers.*.legalName' => ['required', 'string', 'max:255'],
+            'suppliers.*.tradeName' => ['nullable', 'string', 'max:255'],
+            'suppliers.*.tin' => ['nullable', 'string', 'max:100'],
+            'suppliers.*.contactName' => ['nullable', 'string', 'max:255'],
+            'suppliers.*.contactPhone' => ['nullable', 'string', 'max:100'],
+            'suppliers.*.bankDetails' => ['nullable', 'string', 'max:500'],
+            'suppliers.*.notes' => ['nullable', 'string', 'max:1000'],
+            'suppliers.*.categoryTags' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $duplicateMode = $validated['duplicateMode'] ?? 'skip';
+        $orgId = $request->user()->organization_id;
+        $importedCount = 0;
+        $updatedCount = 0;
+        $skippedCount = 0;
+        $newCategoriesCount = 0;
+
+        DB::transaction(function () use (
+            $validated,
+            $duplicateMode,
+            $orgId,
+            &$importedCount,
+            &$updatedCount,
+            &$skippedCount,
+            &$newCategoriesCount
+        ) {
+            foreach ($validated['suppliers'] as $supData) {
+                $legalName = trim($supData['legalName']);
+                $tin = isset($supData['tin']) ? trim($supData['tin']) : null;
+                $categoryTags = isset($supData['categoryTags']) ? trim($supData['categoryTags']) : '';
+
+                // Ensure category exists in categories table if provided
+                if (! empty($categoryTags)) {
+                    $catNames = array_map('trim', explode(',', $categoryTags));
+                    foreach ($catNames as $catName) {
+                        if (! empty($catName)) {
+                            $cat = Category::where('name', $catName)->first();
+                            if (! $cat) {
+                                Category::create([
+                                    'organization_id' => $orgId,
+                                    'name' => $catName,
+                                ]);
+                                $newCategoriesCount++;
+                            }
+                        }
+                    }
+                }
+
+                // Check for existing supplier by TIN (if non-empty) or Legal Name
+                $existing = null;
+                if (! empty($tin)) {
+                    $existing = Supplier::where('tin', $tin)->first();
+                }
+                if (! $existing) {
+                    $existing = Supplier::where('legal_name', $legalName)->first();
+                }
+
+                $mapped = [
+                    'organization_id' => $orgId,
+                    'legal_name' => $legalName,
+                    'trade_name' => $supData['tradeName'] ?? null,
+                    'tin' => $tin ?: null,
+                    'contact_name' => $supData['contactName'] ?? null,
+                    'contact_phone' => $supData['contactPhone'] ?? null,
+                    'bank_details' => $supData['bankDetails'] ?? null,
+                    'notes' => $supData['notes'] ?? null,
+                    'category_tags' => $categoryTags ?: null,
+                    'verification_status' => 'unverified',
+                ];
+
+                if ($existing) {
+                    if ($duplicateMode === 'skip') {
+                        $skippedCount++;
+                        continue;
+                    } elseif ($duplicateMode === 'update') {
+                        $existing->update(array_filter($mapped, fn ($v) => $v !== null));
+                        $updatedCount++;
+                        continue;
+                    }
+                }
+
+                Supplier::create($mapped);
+                $importedCount++;
+            }
+        });
+
+        $this->audit->log(
+            $request->user()->name,
+            'supplier',
+            'import',
+            'import',
+            sprintf('Imported %d new supplier(s), updated %d, skipped %d from Excel.', $importedCount, $updatedCount, $skippedCount),
+        );
+
+        return response()->json([
+            'ok' => true,
+            'imported_count' => $importedCount,
+            'updated_count' => $updatedCount,
+            'skipped_count' => $skippedCount,
+            'new_categories_count' => $newCategoriesCount,
+        ]);
     }
 
     private function mapFields(array $validated): array

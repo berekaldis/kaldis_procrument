@@ -26,7 +26,9 @@ import {
     ShieldCheck,
     Ban,
     PlayCircle,
+    Upload,
 } from "lucide-react";
+import { SupplierImportModal } from "./SupplierImportModal.jsx";
 import { Spinner } from "./ui/spinner.jsx";
 import { Card } from "./ui/card.jsx";
 import { Button } from "./ui/button.jsx";
@@ -107,6 +109,7 @@ export function SuppliersView() {
     const [catDropdownOpen, setCatDropdownOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [bulkBusy, setBulkBusy] = useState(false);
+    const [importOpen, setImportOpen] = useState(false);
     const [user, setUser] = useState(null);
     const { toast } = useToast();
 
@@ -342,6 +345,12 @@ export function SuppliersView() {
                     Export CSV
                 </Button>
                 {userCan(user, "suppliers.manage") && (
+                    <Button variant="outline" onClick={() => setImportOpen(true)} className="shrink-0 text-emerald-700 border-emerald-300 dark:text-emerald-400 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50">
+                        <Upload className="h-4 w-4 mr-1" />
+                        Import Excel
+                    </Button>
+                )}
+                {userCan(user, "suppliers.manage") && (
                     <Button variant="outline" onClick={() => setCategoriesOpen(true)} className="shrink-0">
                         <Tag className="h-4 w-4 mr-1" />
                         Categories
@@ -532,6 +541,12 @@ export function SuppliersView() {
                 open={categoriesOpen}
                 onOpenChange={setCategoriesOpen}
                 onChange={loadCategories}
+            />
+
+            <SupplierImportModal
+                open={importOpen}
+                onOpenChange={setImportOpen}
+                onSuccess={load}
             />
 
             {/* Create / Edit dialog */}

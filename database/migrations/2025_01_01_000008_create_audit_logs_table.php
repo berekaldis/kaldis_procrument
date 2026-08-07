@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
             $table->string('actor')->nullable();
-            $table->string('entity')->nullable();
-            $table->string('entity_id')->nullable();
+            $table->string('entity', 100)->nullable();
+            $table->string('entity_id', 100)->nullable();
             $table->string('action')->nullable();
             $table->text('details')->nullable();
             $table->dateTime('timestamp');
