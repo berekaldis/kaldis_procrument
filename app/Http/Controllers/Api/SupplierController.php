@@ -124,7 +124,14 @@ class SupplierController extends Controller
     {
         $supplier = Supplier::findOrFail($id);
         $name = $supplier->legal_name;
-        $supplier->delete();
+
+        DB::transaction(function () use ($id, $supplier) {
+            DB::table('proforma_request_suppliers')->where('supplier_id', $id)->delete();
+            DB::table('proformas')->where('supplier_id', $id)->delete();
+            DB::table('supplier_documents')->where('supplier_id', $id)->delete();
+            DB::table('telegram_outbox')->where('supplier_id', $id)->update(['supplier_id' => null]);
+            $supplier->delete();
+        });
 
         $this->audit->log(
             $request->user()->name,
@@ -178,7 +185,13 @@ class SupplierController extends Controller
         }
 
         if ($data['action'] === 'delete') {
-            Supplier::whereIn('id', $data['ids'])->delete();
+            DB::transaction(function () use ($data) {
+                DB::table('proforma_request_suppliers')->whereIn('supplier_id', $data['ids'])->delete();
+                DB::table('proformas')->whereIn('supplier_id', $data['ids'])->delete();
+                DB::table('supplier_documents')->whereIn('supplier_id', $data['ids'])->delete();
+                DB::table('telegram_outbox')->whereIn('supplier_id', $data['ids'])->update(['supplier_id' => null]);
+                Supplier::whereIn('id', $data['ids'])->delete();
+            });
         } elseif (isset($verificationActions[$data['action']])) {
             Supplier::whereIn('id', $data['ids'])->update(['verification_status' => $verificationActions[$data['action']]]);
         } else {
