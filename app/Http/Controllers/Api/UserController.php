@@ -107,19 +107,20 @@ class UserController extends Controller
     {
         $actor = $request->user();
         if ($actor->id === $id) {
-            return response()->json(['error' => 'You cannot deactivate your own account.'], 422);
+            return response()->json(['error' => 'You cannot delete your own account.'], 422);
         }
 
         $target = User::findOrFail($id);
-        $target->active = false;
-        $target->save();
+        $email = $target->email;
+        $name = $target->name;
+        $target->delete();
 
         $this->audit->log(
             $actor->name,
             'user',
-            (string) $target->id,
-            'deactivate',
-            'Deactivated user "'.$target->email.'"',
+            (string) $id,
+            'delete',
+            'Deleted user "'.$name.'" ('.$email.')',
         );
 
         return response()->json(['ok' => true]);

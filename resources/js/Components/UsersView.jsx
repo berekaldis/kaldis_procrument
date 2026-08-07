@@ -3,6 +3,8 @@ import {
     UserPlus,
     Pencil,
     UserX,
+    UserCheck,
+    Trash2,
     Shield,
     Mail,
     Phone,
@@ -270,20 +272,40 @@ export function UsersView({ currentUser }) {
         }
     };
 
-    const confirmDeactivate = async () => {
+    const toggleActiveStatus = async (u) => {
+        try {
+            await api(`/api/users/${u.id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ active: !u.active }),
+            });
+            toast({
+                title: !u.active ? "User activated" : "User deactivated",
+                description: `${u.name} is now ${!u.active ? "active" : "inactive"}.`,
+            });
+            await load();
+        } catch (e) {
+            toast({
+                title: "Status change failed",
+                description: e.message,
+                variant: "destructive",
+            });
+        }
+    };
+
+    const confirmDelete = async () => {
         if (!deleteTarget) return;
         setDeleting(true);
         try {
             await api(`/api/users/${deleteTarget.id}`, { method: "DELETE" });
             toast({
-                title: "User deactivated",
-                description: `${deleteTarget.name} can no longer sign in`,
+                title: "User deleted",
+                description: `User "${deleteTarget.name}" was permanently removed.`,
             });
             setDeleteTarget(null);
             await load();
         } catch (e) {
             toast({
-                title: "Deactivation failed",
+                title: "Delete failed",
                 description: e.message,
                 variant: "destructive",
             });
@@ -466,28 +488,53 @@ export function UsersView({ currentUser }) {
                                                     <Clock className="h-3.5 w-3.5" />
                                                     {formatRelativeTime(u.lastLoginAt)}
                                                 </span>
-                                            </TableCell>
-                                            <TableCell className="text-right pr-4">
+                                            </TableC                                             <TableCell className="text-right pr-4">
                                                 <div className="flex items-center justify-end gap-1">
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => openEdit(u)}
                                                         className="h-8 text-brand-700 hover:bg-brand-50 hover:text-brand-800"
+                                                        title="Edit user details"
                                                     >
                                                         <Pencil className="h-3.5 w-3.5" />
                                                         <span className="hidden sm:inline">Edit</span>
                                                     </Button>
+
+                                                    {!self && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => toggleActiveStatus(u)}
+                                                            className={cn(
+                                                                "h-8 text-xs",
+                                                                u.active
+                                                                    ? "text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                                                                    : "text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                                                            )}
+                                                            title={u.active ? "Deactivate User" : "Activate User"}
+                                                        >
+                                                            {u.active ? (
+                                                                <UserX className="h-3.5 w-3.5" />
+                                                            ) : (
+                                                                <UserCheck className="h-3.5 w-3.5" />
+                                                            )}
+                                                            <span className="hidden sm:inline">
+                                                                {u.active ? "Deactivate" : "Activate"}
+                                                            </span>
+                                                        </Button>
+                                                    )}
+
                                                     {self ? (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
                                                             disabled
-                                                            className="h-8 text-muted-foreground"
-                                                            title="You cannot deactivate your own account"
+                                                            className="h-8 text-muted-foreground opacity-50 cursor-not-allowed"
+                                                            title="You cannot delete your own account"
                                                         >
-                                                            <UserX className="h-3.5 w-3.5" />
-                                                            <span className="hidden sm:inline">Deactivate</span>
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                            <span className="hidden sm:inline">Delete</span>
                                                         </Button>
                                                     ) : (
                                                         <Button
@@ -495,13 +542,14 @@ export function UsersView({ currentUser }) {
                                                             size="sm"
                                                             onClick={() => setDeleteTarget(u)}
                                                             className="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                                                            title="Delete User permanently"
                                                         >
-                                                            <UserX className="h-3.5 w-3.5" />
-                                                            <span className="hidden sm:inline">Deactivate</span>
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                            <span className="hidden sm:inline">Delete</span>
                                                         </Button>
                                                     )}
                                                 </div>
-                                            </TableCell>
+                                            </TableCell>Cell>
                                         </TableRow>
                                     );
                                 })
@@ -669,31 +717,36 @@ export function UsersView({ currentUser }) {
                 </DialogContent>
             </Dialog>
 
-            {/* Deactivate confirmation */}
+            {/* Delete User Confirmation */}
             <AlertDialog
                 open={!!deleteTarget}
                 onOpenChange={(o) => !deleting && !o && setDeleteTarget(null)}
             >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Deactivate user?</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogTitle className="text-rose-600 flex items-center gap-2">
+                            <Trash2 className="h-5 w-5 text-rose-600" /> Delete User Account?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2 text-sm text-muted-foreground">
                             <span>
-                                Are you sure you want to deactivate{" "}
-                                <strong className="text-foreground">{deleteTarget?.name}</strong>? They will no
-                                longer be able to sign in. Their account history and audit trail are preserved.
+                                Are you sure you want to permanently delete{" "}
+                                <strong className="text-foreground font-semibold">{deleteTarget?.name}</strong> (
+                                {deleteTarget?.email})?
+                            </span>
+                            <span className="block text-xs text-rose-600 dark:text-rose-400 font-medium">
+                                ⚠️ This action will permanently delete this user account from the system and cannot be undone.
                             </span>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
+                    <AlertDialogFooter className="gap-2">
                         <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={confirmDeactivate}
+                            onClick={confirmDelete}
                             disabled={deleting}
-                            className="bg-rose-600 text-white hover:bg-rose-700"
+                            className="bg-rose-600 text-white hover:bg-rose-700 font-medium"
                         >
-                            {deleting && <Spinner className="h-4 w-4" />}
-                            Deactivate
+                            {deleting && <Spinner className="h-4 w-4 mr-1" />}
+                            Delete User
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
