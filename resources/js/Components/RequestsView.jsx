@@ -286,7 +286,17 @@ export function RequestsView({ onNavigate }) {
                                     <div className="font-mono text-xs font-medium text-brand-700 bg-brand-50 px-2 py-1 rounded">
                                         {r.referenceNo}
                                     </div>
-                                    <RequestStatusBadge status={r.status} />
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={cn(
+                                            "text-[10px] px-2 py-0.5 rounded font-medium border",
+                                            r.paymentType === "credit"
+                                                ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+                                                : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
+                                        )}>
+                                            {r.paymentType === "credit" ? `Credit (${r.creditPeriod || 30}d)` : "Cash"}
+                                        </span>
+                                        <RequestStatusBadge status={r.status} />
+                                    </div>
                                 </div>
                                 <h3 className="font-medium text-sm leading-snug line-clamp-2 mb-1">{r.title}</h3>
                                 <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
@@ -388,10 +398,16 @@ export function RequestsView({ onNavigate }) {
                                     </Card>
                                 )}
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-3 gap-3">
                                     <Card className="p-3.5">
                                         <div className="text-xs text-muted-foreground uppercase tracking-wide">Requested by</div>
                                         <div className="text-sm font-semibold text-foreground mt-0.5">{detail.requestedBy}</div>
+                                    </Card>
+                                    <Card className="p-3.5">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wide">Payment Term</div>
+                                        <div className="text-sm font-semibold text-foreground mt-0.5">
+                                            {detail.paymentType === "credit" ? `Credit (${detail.creditPeriod || 30} Days)` : "Cash"}
+                                        </div>
                                     </Card>
                                     <Card className="p-3.5">
                                         <div className="text-xs text-muted-foreground uppercase tracking-wide">Deadline</div>
@@ -583,6 +599,8 @@ function CreateRequestDialog({
         const d = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
         return d.toISOString().slice(0, 16);
     });
+    const [paymentType, setPaymentType] = useState("cash");
+    const [creditPeriod, setCreditPeriod] = useState(30);
     const [items, setItems] = useState([
         { itemName: "", description: "", quantity: 1, unit: "pcs" },
     ]);
@@ -607,6 +625,8 @@ function CreateRequestDialog({
             const d = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
             return d.toISOString().slice(0, 16);
         });
+        setPaymentType("cash");
+        setCreditPeriod(30);
         setItems([{ itemName: "", description: "", quantity: 1, unit: "pcs" }]);
         setSelectedSuppliers([]);
         setCategoryFilter("all");
@@ -694,6 +714,8 @@ function CreateRequestDialog({
                     title: title.trim(),
                     description: description.trim(),
                     deadline,
+                    paymentType,
+                    creditPeriod: paymentType === "credit" ? creditPeriod : null,
                     items: validItems.map((it) => ({
                         itemName: it.itemName.trim(),
                         description: it.description.trim(),
@@ -764,6 +786,61 @@ function CreateRequestDialog({
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="Special instructions or specifications for suppliers…"
                                 />
+                            </div>
+                        </div>
+                        <div>
+                            <Label className="text-xs font-medium mb-1.5 block">Payment Term <span className="text-rose-500">*</span></Label>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="inline-flex rounded-lg border p-1 bg-muted/30">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentType("cash")}
+                                        className={cn(
+                                            "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                                            paymentType === "cash"
+                                                ? "bg-background text-foreground shadow-sm font-semibold"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        💵 Cash / ካሽ
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPaymentType("credit");
+                                            if (!creditPeriod) setCreditPeriod(30);
+                                        }}
+                                        className={cn(
+                                            "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                                            paymentType === "credit"
+                                                ? "bg-background text-foreground shadow-sm font-semibold"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        💳 Credit / ብድር
+                                    </button>
+                                </div>
+
+                                {paymentType === "credit" && (
+                                    <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
+                                        <span className="text-xs text-muted-foreground font-medium mr-1">Period:</span>
+                                        {[30, 60, 90].map((days) => (
+                                            <button
+                                                key={days}
+                                                type="button"
+                                                onClick={() => setCreditPeriod(days)}
+                                                className={cn(
+                                                    "px-2.5 py-1 text-xs rounded-md border font-medium transition-colors",
+                                                    creditPeriod === days
+                                                        ? "bg-brand-600 text-white border-brand-600 dark:bg-gold-500 dark:text-zinc-950 dark:border-gold-500"
+                                                        : "bg-card text-foreground hover:bg-accent border-border"
+                                                )}
+                                            >
+                                                {days} Days
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

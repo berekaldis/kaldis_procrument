@@ -130,6 +130,8 @@ export interface ProformaRequestListItem {
     requestedBy: string;
     deadline: string;
     status: string;
+    paymentType?: "cash" | "credit";
+    creditPeriod?: number | null;
     createdAt: string;
     supplierCount: number;
     proformaCount: number;

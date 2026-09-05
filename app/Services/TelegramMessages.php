@@ -49,6 +49,10 @@ class TelegramMessages
             'en' => "📦 Proforma Request\nRef: :ref\nTitle: :title\n:items\n\nDeadline: :deadline\n\nPlease respond with your quotation. Thank you!",
             'am' => "📦 የፕሮፎርማ ጥያቄ\nመለያ ቁጥር: :ref\nርዕስ: :title\n:items\n\nየመጨረሻ ቀን: :deadline\n\nእባክዎ ዋጋ ማቅረቢያዎን ይላኩልን። እናመሰግናለን!",
         ],
+        'welcome_unlinked' => [
+            'en' => "👋 <b>Welcome to Kaldi Procurement Bot!</b>\n\nYour Telegram Chat ID is: <code>:chat_id</code>\n\nPlease share this Chat ID with the procurement team to link your supplier profile. Once registered in the system, you will receive proforma requests here.",
+            'am' => "👋 <b>እንኳን ወደ ካልዲ ግዥ ቦት በደህና መጡ!</b>\n\nየእርስዎ ቴሌግራም ቻት መለያ (Chat ID)፦ <code>:chat_id</code>\n\nእባክዎን ይህንን የቻት መለያ ቁጥር ለግዥ ቡድኑ በመስጠት አቅራቢነትዎን ያስመዝግቡ። ቁጥሩ በስርዓቱ ከተመዘገበ በኋላ የፕሮፎርማ ጥያቄዎችን እዚህ ይደርስዎታል።",
+        ],
     ];
 
     public const LANGUAGE_BUTTONS = ['English 🇬🇧', 'አማርኛ 🇪🇹'];
@@ -71,11 +75,13 @@ class TelegramMessages
         $title = $replace['title'] ?? '';
         $items = $replace['items'] ?? '';
         $deadline = $replace['deadline'] ?? '';
+        $paymentTerms = $replace['paymentTerms'] ?? 'Cash / ካሽ';
 
         $msg = "📦 <b>PROFORMA REQUEST / የፕሮፎርማ ጥያቄ</b>\n";
         $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
         $msg .= "<b>Ref / መለያ ቁጥር:</b> {$ref}\n";
-        $msg .= "<b>Title / ርዕስ:</b> {$title}\n\n";
+        $msg .= "<b>Title / ርዕስ:</b> {$title}\n";
+        $msg .= "<b>Payment Terms / የክፍያ ሁኔታ:</b> {$paymentTerms}\n\n";
         $msg .= "<b>Requested Line Items / የተጠየቁ ዕቃዎች፦</b>\n{$items}\n\n";
         $msg .= "<b>Deadline / የመጨረሻ ቀን:</b> {$deadline}\n";
         $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";

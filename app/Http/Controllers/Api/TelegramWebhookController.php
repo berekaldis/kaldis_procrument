@@ -113,61 +113,8 @@ class TelegramWebhookController extends Controller
 
     private function handleUnlinkedMessage(string $chatId, ?string $username, TelegramSession $session, string $text): void
     {
-        if ($text === '' || str_starts_with(strtolower($text), '/start')) {
-            $session->update(['language' => null]);
-            $this->telegram->sendWithKeyboard(
-                $chatId,
-                TelegramMessages::bilingualLanguagePrompt(),
-                [TelegramMessages::LANGUAGE_BUTTONS],
-            );
-
-            return;
-        }
-
-        if ($session->language === null) {
-            $lang = TelegramMessages::resolveLanguageChoice($text);
-
-            if ($lang === null) {
-                $this->telegram->sendWithKeyboard(
-                    $chatId,
-                    TelegramMessages::bilingualLanguagePrompt(),
-                    [TelegramMessages::LANGUAGE_BUTTONS],
-                );
-
-                return;
-            }
-
-            $session->update(['language' => $lang]);
-            $this->telegram->sendRaw($chatId, TelegramMessages::get('ask_tin', $lang));
-
-            return;
-        }
-
-        $lang = $session->language;
-        $supplier = Supplier::where('tin', $text)->first();
-
-        if (! $supplier) {
-            $this->telegram->sendRaw($chatId, TelegramMessages::get('tin_not_found', $lang, ['tin' => $text]));
-
-            return;
-        }
-
-        $supplier->update([
-            'telegram_chat_id' => $chatId,
-            'telegram_username' => $username,
-            'language' => $lang,
-        ]);
-
-        $this->audit->log(
-            'Telegram Bot',
-            'supplier',
-            (string) $supplier->id,
-            'telegram_linked',
-            'Supplier "'.$supplier->legal_name.'" linked their Telegram chat (language: '.$lang.').',
-        );
-
-        $this->telegram->sendRaw($chatId, TelegramMessages::get('linked', $lang, ['name' => $supplier->legal_name]));
-        $session->delete();
+        $msg = TelegramMessages::get('welcome_unlinked', 'en', ['chat_id' => $chatId]);
+        $this->telegram->sendRaw($chatId, $msg);
     }
 
     private function handleLinkedMessage(Supplier $supplier, TelegramSession $session, array $message, string $text): void

@@ -82,6 +82,9 @@ class ProformaRequestController extends Controller
         $pr = DB::transaction(function () use ($data, $user) {
             $reference = ReferenceNumberService::forProformaRequest();
 
+            $paymentType = $data['paymentType'] ?? 'cash';
+            $creditPeriod = $paymentType === 'credit' ? ($data['creditPeriod'] ?? 30) : null;
+
             $pr = ProformaRequest::create([
                 'organization_id' => $user->organization_id,
                 'reference_no' => $reference,
@@ -89,6 +92,8 @@ class ProformaRequestController extends Controller
                 'description' => $data['description'] ?? null,
                 'requested_by' => $user->name,
                 'deadline' => $data['deadline'] ?? null,
+                'payment_type' => $paymentType,
+                'credit_period' => $creditPeriod,
                 'status' => 'draft',
             ]);
 
@@ -146,6 +151,8 @@ class ProformaRequestController extends Controller
                 'description' => $source->description,
                 'requested_by' => $user->name,
                 'deadline' => now()->addDays(3),
+                'payment_type' => $source->payment_type ?? 'cash',
+                'credit_period' => $source->credit_period,
                 'status' => 'draft',
             ]);
 
@@ -190,6 +197,10 @@ class ProformaRequestController extends Controller
         if (isset($data['title'])) $update['title'] = $data['title'];
         if (array_key_exists('description', $data)) $update['description'] = $data['description'];
         if (array_key_exists('deadline', $data)) $update['deadline'] = $data['deadline'];
+        if (isset($data['paymentType'])) {
+            $update['payment_type'] = $data['paymentType'];
+            $update['credit_period'] = $data['paymentType'] === 'credit' ? ($data['creditPeriod'] ?? 30) : null;
+        }
         if (isset($data['status'])) $update['status'] = $data['status'];
         $pr->update($update);
 
@@ -240,11 +251,16 @@ class ProformaRequestController extends Controller
                 continue;
             }
 
+            $paymentTermText = ($pr->payment_type ?? 'cash') === 'credit'
+                ? "Credit ({$pr->credit_period} Days) / ክሬዲት ({$pr->credit_period} ቀን)"
+                : "Cash / ካሽ";
+
             $message = TelegramMessages::bilingualOutboundRequest([
                 'ref' => $pr->reference_no,
                 'title' => $pr->title,
                 'items' => $items,
                 'deadline' => $pr->deadline ? $pr->deadline->format('Y-m-d H:i') : 'N/A',
+                'paymentTerms' => $paymentTermText,
             ]);
 
             // Dispatched after response so Telegram HTTP round-trips execute immediately
@@ -283,6 +299,8 @@ class ProformaRequestController extends Controller
             'requestedBy' => $r->requested_by,
             'deadline' => $r->deadline?->toIso8601String(),
             'status' => $r->status,
+            'paymentType' => $r->payment_type ?? 'cash',
+            'creditPeriod' => $r->credit_period,
             'supplierCount' => $r->supplier_count ?? 0,
             'proformaCount' => $r->proforma_count ?? 0,
             'itemCount' => $r->item_count ?? 0,
@@ -302,6 +320,8 @@ class ProformaRequestController extends Controller
             'requestedBy' => $r->requested_by,
             'deadline' => $r->deadline?->toIso8601String(),
             'status' => $r->status,
+            'paymentType' => $r->payment_type ?? 'cash',
+            'creditPeriod' => $r->credit_period,
             'items' => $r->items?->map(fn ($i) => [
                 'id' => $i->id,
                 'itemName' => $i->item_name,

@@ -81,6 +81,7 @@ const EMPTY_FORM = {
     contactName: "",
     contactPhone: "",
     contactEmail: "",
+    telegramChatId: "",
     paymentTerms: "",
     bankDetails: "",
     notes: "",
@@ -234,6 +235,7 @@ export function SuppliersView() {
             contactName: s.contactName || "",
             contactPhone: s.contactPhone || "",
             contactEmail: s.contactEmail || "",
+            telegramChatId: s.telegramChatId || "",
             paymentTerms: s.paymentTerms || "",
             bankDetails: s.bankDetails || "",
             notes: s.notes || "",
@@ -774,8 +776,8 @@ export function SuppliersView() {
                                     </Field>
                                 </div>
 
-                                {/* Contact Person, Phone, Email */}
-                                <div className="grid sm:grid-cols-3 gap-3 pt-1 border-t">
+                                {/* Contact Person, Phone, Email, Telegram Chat ID */}
+                                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 border-t">
                                     <Field label="Contact Person">
                                         <Input
                                             value={form.contactName}
@@ -796,6 +798,13 @@ export function SuppliersView() {
                                             value={form.contactEmail}
                                             onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
                                             placeholder="email@supplier.com"
+                                        />
+                                    </Field>
+                                    <Field label="Telegram Chat ID">
+                                        <Input
+                                            value={form.telegramChatId}
+                                            onChange={(e) => setForm({ ...form, telegramChatId: e.target.value })}
+                                            placeholder="e.g. 123456789"
                                         />
                                     </Field>
                                 </div>

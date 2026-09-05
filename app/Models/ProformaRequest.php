@@ -10,11 +10,12 @@ class ProformaRequest extends Model
 {
     protected $fillable = [
         'organization_id', 'reference_no', 'title', 'description',
-        'requested_by', 'deadline', 'status',
+        'requested_by', 'deadline', 'payment_type', 'credit_period', 'status',
     ];
 
     protected $casts = [
         'deadline' => 'datetime',
+        'credit_period' => 'integer',
     ];
 
     public function organization(): BelongsTo
