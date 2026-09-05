@@ -251,11 +251,13 @@ class ProformaRequestController extends Controller
                 continue;
             }
 
-            $paymentTermText = ($pr->payment_type ?? 'cash') === 'credit'
-                ? "Credit ({$pr->credit_period} Days) / ክሬዲት ({$pr->credit_period} ቀን)"
-                : "Cash / ካሽ";
+            $supplierLang = $supplier->language ?: 'en';
 
-            $message = TelegramMessages::bilingualOutboundRequest([
+            $paymentTermText = ($pr->payment_type ?? 'cash') === 'credit'
+                ? ($supplierLang === 'am' ? "ክሬዲት ({$pr->credit_period} ቀን)" : "Credit ({$pr->credit_period} Days)")
+                : ($supplierLang === 'am' ? "ካሽ" : "Cash");
+
+            $message = TelegramMessages::outboundRequest($supplierLang, [
                 'ref' => $pr->reference_no,
                 'title' => $pr->title,
                 'items' => $items,

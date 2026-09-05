@@ -450,6 +450,8 @@ function OrganizationCard({ canManage }) {
     const [tin, setTin] = useState("");
     const [address, setAddress] = useState("");
     const [currency, setCurrency] = useState("ETB");
+    const [defaultCreditPeriod, setDefaultCreditPeriod] = useState(30);
+    const [creditPaymentTerms, setCreditPaymentTerms] = useState("");
     const [saving, setSaving] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const { toast } = useToast();
@@ -463,6 +465,8 @@ function OrganizationCard({ canManage }) {
             setTin(o.tin || "");
             setAddress(o.address || "");
             setCurrency(o.currency || "ETB");
+            setDefaultCreditPeriod(o.defaultCreditPeriod ?? 30);
+            setCreditPaymentTerms(o.creditPaymentTerms || "");
         } catch (e) {
             toast({ title: "Failed to load organization", description: e.message, variant: "destructive" });
         } finally {
@@ -479,7 +483,14 @@ function OrganizationCard({ canManage }) {
         try {
             const o = await api("/api/organization", {
                 method: "PATCH",
-                body: JSON.stringify({ name, tin, address, currency }),
+                body: JSON.stringify({
+                    name,
+                    tin,
+                    address,
+                    currency,
+                    defaultCreditPeriod: Number(defaultCreditPeriod),
+                    creditPaymentTerms,
+                }),
             });
             setOrg(o);
             toast({ title: "Organization profile saved" });
@@ -519,10 +530,10 @@ function OrganizationCard({ canManage }) {
         <Card className="p-6">
             <div className="flex items-center gap-2 mb-1">
                 <Building2 className="h-4 w-4 text-brand-600" />
-                <h3 className="font-semibold">Organization Profile</h3>
+                <h3 className="font-semibold">Organization Profile & Credit Settings</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-4">
-                Company details used on record — Kaldi&apos;s Coffee&apos;s brand identity in the app itself stays fixed.
+                Company details and credit payment definitions for procurement requests.
             </p>
 
             {loading ? (
@@ -568,14 +579,44 @@ function OrganizationCard({ canManage }) {
                         <Label className="text-xs font-medium mb-1.5 block">Address</Label>
                         <Input value={address} onChange={(e) => setAddress(e.target.value)} disabled={!canManage} />
                     </div>
-                    <div className="sm:w-40">
-                        <Label className="text-xs font-medium mb-1.5 block">Currency</Label>
-                        <Input value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!canManage} />
+                    <div className="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <Label className="text-xs font-medium mb-1.5 block">Currency</Label>
+                            <Input value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!canManage} />
+                        </div>
+                        <div>
+                            <Label className="text-xs font-medium mb-1.5 block">Default Credit Period (Days)</Label>
+                            <Input
+                                type="number"
+                                min="1"
+                                max="365"
+                                value={defaultCreditPeriod}
+                                onChange={(e) => setDefaultCreditPeriod(e.target.value)}
+                                disabled={!canManage}
+                                placeholder="30"
+                            />
+                        </div>
                     </div>
+
+                    {/* Credit Payment Definition */}
+                    <div className="space-y-1.5 pt-2 border-t">
+                        <Label className="text-xs font-medium block">Credit Payment Definition & Terms</Label>
+                        <Textarea
+                            value={creditPaymentTerms}
+                            onChange={(e) => setCreditPaymentTerms(e.target.value)}
+                            disabled={!canManage}
+                            rows={3}
+                            placeholder="Define organizational credit payment policies, allowed periods (e.g. Net 30, 60 days), and payment terms..."
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                            These credit terms will define default parameters when creating new credit-based proforma requests.
+                        </p>
+                    </div>
+
                     {canManage && (
                         <Button onClick={save} disabled={saving} className="w-fit">
                             {saving && <Spinner className="h-4 w-4 mr-1" />}
-                            Save Organization Profile
+                            Save Organization & Credit Settings
                         </Button>
                     )}
                 </div>

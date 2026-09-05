@@ -15,7 +15,7 @@ class RequirePermission
      * @param  Closure(Request): Response  $next
      * @param  string  $permission  Dotted permission string (e.g. 'suppliers.manage')
      */
-    public function handle(Request $request, Closure $next, string $permission): Response
+    public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
         $user = $request->user();
 
@@ -23,9 +23,19 @@ class RequirePermission
             return response()->json(['error' => 'Unauthenticated.'], 401);
         }
 
-        if (! RoleService::canDotted($user->role, $permission)) {
+        $allowed = false;
+        foreach ($permissions as $p) {
+            foreach (explode(',', $p) as $perm) {
+                if (RoleService::canDotted($user->role, trim($perm))) {
+                    $allowed = true;
+                    break 2;
+                }
+            }
+        }
+
+        if (! $allowed) {
             return response()->json([
-                'error' => 'Forbidden — this action requires the '.$permission.' permission.',
+                'error' => 'Forbidden — required permission missing.',
             ], 403);
         }
 

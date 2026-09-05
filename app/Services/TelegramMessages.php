@@ -14,8 +14,8 @@ class TelegramMessages
             'am' => "በ<b>:tin</b> የግብር መለያ ቁጥር አቅራቢ አላገኘንም። እባክዎ ቁጥሩን በድጋሚ ያረጋግጡ ወይም የግዢ ቡድኑን ያግኙ።",
         ],
         'linked' => [
-            'en' => "✅ Linked! You're now connected as <b>:name</b>. You'll receive proforma requests here and can reply with a quotation (text, PDF, or photo).\n\nSend /language anytime to change your language.",
-            'am' => "✅ ተገናኝቷል! እንደ <b>:name</b> ተገናኝተዋል። የፕሮፎርማ ጥያቄዎችን እዚህ ይቀበላሉ እና በጽሑፍ፣ በPDF ወይም በፎቶ ዋጋ ማቅረቢያ መላክ ይችላሉ።\n\nቋንቋ ለመቀየር በማንኛውም ጊዜ /language ይላኩ።",
+            'en' => "✅ Linked! You're now connected as <b>:name</b>. You'll receive proforma requests here and can reply with a quotation (text, PDF, or photo).",
+            'am' => "✅ ተገናኝቷል! እንደ <b>:name</b> ተገናኝተዋል። የፕሮፎርማ ጥያቄዎችን እዚህ ይቀበላሉ እና በጽሑፍ፣ በPDF ወይም በፎቶ ዋጋ ማቅረቢያ መላክ ይችላሉ።",
         ],
         'no_open_request' => [
             'en' => "Thanks for reaching out — we don't currently have an open proforma request for you. We'll notify you here as soon as one is sent.",
@@ -38,16 +38,12 @@ class TelegramMessages
             'am' => "✅ እናመሰግናለን! ለ<b>:ref</b> (:title) ያቀረቡት ፕሮፎርማ ደርሶናል።",
         ],
         'choose_language' => [
-            'en' => "🌐 Please select your language.",
-            'am' => "🌐 እባክዎ ቋንቋዎን ይምረጡ።",
+            'en' => "🌐 Please select your language / እባክዎ ቋንቋዎን ይምረጡ፦",
+            'am' => "🌐 እባክዎ ቋንቋዎን ይምረጡ / Please select your language:",
         ],
         'language_changed' => [
-            'en' => "Language set to English.",
-            'am' => "ቋንቋ ወደ አማርኛ ተቀይሯል።",
-        ],
-        'outbound_request' => [
-            'en' => "📦 Proforma Request\nRef: :ref\nTitle: :title\n:items\n\nDeadline: :deadline\n\nPlease respond with your quotation. Thank you!",
-            'am' => "📦 የፕሮፎርማ ጥያቄ\nመለያ ቁጥር: :ref\nርዕስ: :title\n:items\n\nየመጨረሻ ቀን: :deadline\n\nእባክዎ ዋጋ ማቅረቢያዎን ይላኩልን። እናመሰግናለን!",
+            'en' => "Language set to English 🇬🇧",
+            'am' => "ቋንቋ ወደ አማርኛ 🇪🇹 ተቀይሯል።",
         ],
         'welcome_unlinked' => [
             'en' => "👋 <b>Welcome to Kaldi Procurement Bot!</b>\n\nYour Telegram Chat ID is: <code>:chat_id</code>\n\nPlease share this Chat ID with the procurement team to link your supplier profile. Once registered in the system, you will receive proforma requests here.",
@@ -69,35 +65,55 @@ class TelegramMessages
         return $template;
     }
 
-    public static function bilingualOutboundRequest(array $replace = []): string
+    public static function outboundRequest(string $lang, array $replace = []): string
     {
         $ref = $replace['ref'] ?? '';
         $title = $replace['title'] ?? '';
         $items = $replace['items'] ?? '';
         $deadline = $replace['deadline'] ?? '';
-        $paymentTerms = $replace['paymentTerms'] ?? 'Cash / ካሽ';
+        $paymentTerms = $replace['paymentTerms'] ?? ($lang === 'am' ? 'ካሽ' : 'Cash');
 
-        $msg = "📦 <b>PROFORMA REQUEST / የፕሮፎርማ ጥያቄ</b>\n";
+        if ($lang === 'am') {
+            $msg = "📦 <b>የፕሮፎርማ ጥያቄ</b>\n";
+            $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
+            $msg .= "<b>መለያ ቁጥር:</b> {$ref}\n";
+            $msg .= "<b>ርዕስ:</b> {$title}\n";
+            $msg .= "<b>የክፍያ ሁኔታ:</b> {$paymentTerms}\n\n";
+            $msg .= "<b>የተጠየቁ ዕቃዎች፦</b>\n{$items}\n\n";
+            $msg .= "<b>የመጨረሻ ቀን:</b> {$deadline}\n";
+            $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
+            $msg .= "💰 <b>ዋጋ ለማስገባት፦</b>\n";
+            $msg .= "እባክዎ የእያንዳንዱን እቃ የነጠላ ዋጋ በጽሁፍ (ምሳሌ፦ <code>1: 450, 2: 120</code>)፣ በPDF ወይም በፎቶ ይላኩ። እናመሰግናለን!";
+
+            return $msg;
+        }
+
+        $msg = "📦 <b>PROFORMA REQUEST</b>\n";
         $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-        $msg .= "<b>Ref / መለያ ቁጥር:</b> {$ref}\n";
-        $msg .= "<b>Title / ርዕስ:</b> {$title}\n";
-        $msg .= "<b>Payment Terms / የክፍያ ሁኔታ:</b> {$paymentTerms}\n\n";
-        $msg .= "<b>Requested Line Items / የተጠየቁ ዕቃዎች፦</b>\n{$items}\n\n";
-        $msg .= "<b>Deadline / የመጨረሻ ቀን:</b> {$deadline}\n";
+        $msg .= "<b>Ref:</b> {$ref}\n";
+        $msg .= "<b>Title:</b> {$title}\n";
+        $msg .= "<b>Payment Terms:</b> {$paymentTerms}\n\n";
+        $msg .= "<b>Requested Line Items:</b>\n{$items}\n\n";
+        $msg .= "<b>Deadline:</b> {$deadline}\n";
         $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-        $msg .= "💰 <b>HOW TO SUBMIT PRICES / ዋጋ ለማስገባት፦</b>\n";
+        $msg .= "💰 <b>HOW TO SUBMIT PRICES:</b>\n";
         $msg .= "Reply to this message with your unit prices (in ETB):\n";
         $msg .= "• Example format: <code>1: 450, 2: 120</code>\n";
         $msg .= "• Or simply type: <code>450, 120</code>\n";
         $msg .= "• Or attach a PDF / Photo quotation document!\n\n";
-        $msg .= "🇪🇹 እባክዎ የእያንዳንዱን እቃ የነጠላ ዋጋ በጽሁፍ (ምሳሌ፦ 1: 450, 2: 120)፣ በPDF ወይም በፎቶ ይላኩ። እናመሰግናለን!";
+        $msg .= "Thank you!";
 
         return $msg;
     }
 
+    public static function bilingualOutboundRequest(array $replace = []): string
+    {
+        return self::outboundRequest('en', $replace);
+    }
+
     public static function bilingualLanguagePrompt(): string
     {
-        return self::get('choose_language', 'en')."\n".self::get('choose_language', 'am');
+        return "🌐 <b>Please select your language / እባክዎ ቋንቋዎን ይምረጡ፦</b>";
     }
 
     /**

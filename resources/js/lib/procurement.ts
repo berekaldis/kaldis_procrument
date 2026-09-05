@@ -22,9 +22,13 @@ export type Permission =
     | "requests.view"
     | "requests.create"
     | "requests.send"
+    | "requests.edit"
+    | "requests.delete"
     | "requests.manage"
     | "proformas.view"
     | "proformas.review"
+    | "proformas.edit"
+    | "proformas.delete"
     | "notifications.view"
     | "audit.view"
     | "outbox.view"
@@ -34,15 +38,15 @@ export type Permission =
 
 export const ALL_PERMISSIONS: Permission[] = [
     "dashboard.view", "suppliers.view", "suppliers.manage", "suppliers.verify", "suppliers.import",
-    "requests.view", "requests.create", "requests.send", "requests.manage",
-    "proformas.view", "proformas.review",
+    "requests.view", "requests.create", "requests.send", "requests.edit", "requests.delete", "requests.manage",
+    "proformas.view", "proformas.review", "proformas.edit", "proformas.delete",
     "notifications.view", "audit.view", "outbox.view", "settings.view", "settings.manage", "users.manage",
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     admin: ALL_PERMISSIONS,
-    purchaser: ["dashboard.view","suppliers.view","suppliers.manage","suppliers.import","requests.view","requests.create","requests.send","requests.manage","proformas.view","proformas.review","notifications.view","audit.view"],
-    finance: ["dashboard.view","proformas.view","proformas.review","notifications.view","audit.view"],
+    purchaser: ["dashboard.view","suppliers.view","suppliers.manage","suppliers.import","requests.view","requests.create","requests.send","requests.edit","requests.delete","requests.manage","proformas.view","proformas.review","proformas.edit","proformas.delete","notifications.view","audit.view"],
+    finance: ["dashboard.view","proformas.view","proformas.review","proformas.edit","proformas.delete","notifications.view","audit.view"],
     requester: ["dashboard.view","suppliers.view","requests.view","requests.create","notifications.view"],
 };
 

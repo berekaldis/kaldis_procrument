@@ -113,8 +113,29 @@ class TelegramWebhookController extends Controller
 
     private function handleUnlinkedMessage(string $chatId, ?string $username, TelegramSession $session, string $text): void
     {
+        if (strtolower($text) === '/start') {
+            $msg = TelegramMessages::get('welcome_unlinked', 'en', ['chat_id' => $chatId]);
+            $this->telegram->sendRaw($chatId, $msg);
+            $this->telegram->sendWithKeyboard($chatId, TelegramMessages::bilingualLanguagePrompt(), [TelegramMessages::LANGUAGE_BUTTONS]);
+            $session->update(['pending_action' => 'select_initial_language', 'pending_payload' => null]);
+
+            return;
+        }
+
+        if ($session->pending_action === 'select_initial_language') {
+            $newLang = TelegramMessages::resolveLanguageChoice($text);
+            if ($newLang !== null) {
+                $session->clearPending();
+                $this->telegram->sendRaw($chatId, TelegramMessages::get('language_changed', $newLang));
+
+                return;
+            }
+        }
+
         $msg = TelegramMessages::get('welcome_unlinked', 'en', ['chat_id' => $chatId]);
         $this->telegram->sendRaw($chatId, $msg);
+        $this->telegram->sendWithKeyboard($chatId, TelegramMessages::bilingualLanguagePrompt(), [TelegramMessages::LANGUAGE_BUTTONS]);
+        $session->update(['pending_action' => 'select_initial_language', 'pending_payload' => null]);
     }
 
     private function handleLinkedMessage(Supplier $supplier, TelegramSession $session, array $message, string $text): void
@@ -122,27 +143,24 @@ class TelegramWebhookController extends Controller
         $lang = $supplier->language ?: 'en';
         $chatId = $supplier->telegram_chat_id;
 
-        if (strtolower($text) === '/language') {
+        if (strtolower($text) === '/start') {
+            $msg = TelegramMessages::get('linked', $lang, ['name' => $supplier->legal_name]);
+            $this->telegram->sendRaw($chatId, $msg);
             $this->telegram->sendWithKeyboard($chatId, TelegramMessages::bilingualLanguagePrompt(), [TelegramMessages::LANGUAGE_BUTTONS]);
-            $session->update(['pending_action' => 'relink_language', 'pending_payload' => null]);
+            $session->update(['pending_action' => 'select_initial_language', 'pending_payload' => null]);
 
             return;
         }
 
-        if ($session->pending_action === 'relink_language') {
+        if ($session->pending_action === 'select_initial_language') {
             $newLang = TelegramMessages::resolveLanguageChoice($text);
-
-            if ($newLang === null) {
-                $this->telegram->sendWithKeyboard($chatId, TelegramMessages::bilingualLanguagePrompt(), [TelegramMessages::LANGUAGE_BUTTONS]);
+            if ($newLang !== null) {
+                $supplier->update(['language' => $newLang]);
+                $session->clearPending();
+                $this->telegram->sendRaw($chatId, TelegramMessages::get('language_changed', $newLang));
 
                 return;
             }
-
-            $supplier->update(['language' => $newLang]);
-            $session->clearPending();
-            $this->telegram->sendRaw($chatId, TelegramMessages::get('language_changed', $newLang));
-
-            return;
         }
 
         if ($session->pending_action === 'select_request') {

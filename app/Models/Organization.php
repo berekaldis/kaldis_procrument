@@ -9,10 +9,12 @@ class Organization extends Model
 {
     protected $fillable = [
         'name', 'tin', 'address', 'logo_path', 'currency', 'approval_threshold',
+        'default_credit_period', 'credit_payment_terms',
     ];
 
     protected $casts = [
         'approval_threshold' => 'decimal:2',
+        'default_credit_period' => 'integer',
     ];
 
     public function users(): HasMany

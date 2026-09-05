@@ -570,8 +570,8 @@ export function SuppliersView() {
 
             {/* Create / Edit dialog */}
             <Dialog open={formOpen} onOpenChange={setFormOpen}>
-                <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto p-6">
-                    <DialogHeader>
+                <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+                    <DialogHeader className="shrink-0">
                         <DialogTitle className="flex items-center gap-2 text-lg font-bold">
                             <Building2 className="h-5 w-5 text-brand-600 dark:text-gold-400" />
                             {editing ? "Edit Supplier" : "Add New Supplier"}
@@ -600,7 +600,7 @@ export function SuppliersView() {
                         };
 
                         return (
-                            <div className="space-y-4 py-2">
+                            <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-2">
                                 {/* Legal Company Name & Trade Name */}
                                 <div className="grid sm:grid-cols-2 gap-4">
                                     <Field label="Legal Company Name *" required>
@@ -831,7 +831,7 @@ export function SuppliersView() {
                         );
                     })()}
 
-                    <DialogFooter className="pt-3 border-t">
+                    <DialogFooter className="pt-3 border-t shrink-0">
                         <Button variant="outline" onClick={() => setFormOpen(false)}>
                             Cancel
                         </Button>

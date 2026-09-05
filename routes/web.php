@@ -86,9 +86,9 @@ Route::prefix('api')->group(function () {
         Route::post('/proforma-requests', [ProformaRequestController::class, 'store'])
             ->middleware('permission:requests.create');
         Route::patch('/proforma-requests/{id}', [ProformaRequestController::class, 'update'])
-            ->whereNumber('id')->middleware('permission:requests.manage');
+            ->whereNumber('id')->middleware('permission:requests.edit,requests.manage');
         Route::delete('/proforma-requests/{id}', [ProformaRequestController::class, 'destroy'])
-            ->whereNumber('id')->middleware('permission:requests.manage');
+            ->whereNumber('id')->middleware('permission:requests.delete,requests.manage');
         Route::post('/proforma-requests/{id}/send', [ProformaRequestController::class, 'send'])
             ->whereNumber('id')->middleware('permission:requests.send');
         Route::post('/proforma-requests/{id}/clone', [ProformaRequestController::class, 'clone'])
@@ -98,7 +98,9 @@ Route::prefix('api')->group(function () {
         Route::get('/proformas', [ProformaController::class, 'index']);
         Route::get('/proformas/{id}', [ProformaController::class, 'show'])->whereNumber('id');
         Route::patch('/proformas/{id}', [ProformaController::class, 'update'])
-            ->whereNumber('id')->middleware('permission:proformas.review');
+            ->whereNumber('id')->middleware('permission:proformas.edit,proformas.review');
+        Route::delete('/proformas/{id}', [ProformaController::class, 'destroy'])
+            ->whereNumber('id')->middleware('permission:proformas.delete');
         Route::post('/proformas/manual', [ProformaController::class, 'manual'])
             ->middleware('permission:proformas.review');
 

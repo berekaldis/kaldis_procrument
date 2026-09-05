@@ -12,9 +12,13 @@ enum Permission: string
     case REQUESTS_VIEW = 'requests_view';
     case REQUESTS_CREATE = 'requests_create';
     case REQUESTS_SEND = 'requests_send';
+    case REQUESTS_EDIT = 'requests_edit';
+    case REQUESTS_DELETE = 'requests_delete';
     case REQUESTS_MANAGE = 'requests_manage';
     case PROFORMAS_VIEW = 'proformas_view';
     case PROFORMAS_REVIEW = 'proformas_review';
+    case PROFORMAS_EDIT = 'proformas_edit';
+    case PROFORMAS_DELETE = 'proformas_delete';
     case NOTIFICATIONS_VIEW = 'notifications_view';
     case AUDIT_VIEW = 'audit_view';
     case OUTBOX_VIEW = 'outbox_view';

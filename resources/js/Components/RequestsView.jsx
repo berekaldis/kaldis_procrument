@@ -21,6 +21,8 @@ import {
     Tag,
     Copy,
     Printer,
+    LayoutGrid,
+    List,
 } from "lucide-react";
 import { Spinner } from "./ui/spinner.jsx";
 import { Card } from "./ui/card.jsx";
@@ -78,8 +80,15 @@ export function RequestsView({ onNavigate }) {
     const [detailOpen, setDetailOpen] = useState(false);
     const [sending, setSending] = useState(false);
     const [cloning, setCloning] = useState(false);
+    const [viewMode, setViewMode] = useState("grid");
     const [user, setUser] = useState(null);
     const { toast } = useToast();
+
+    useEffect(() => {
+        api("/api/auth/me")
+            .then((d) => setUser(d.user))
+            .catch(() => {});
+    }, []);
 
     const buildParams = useCallback(() => {
         const params = new URLSearchParams();
@@ -233,6 +242,35 @@ export function RequestsView({ onNavigate }) {
                     </SelectContent>
                 </Select>
                 <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
+                
+                {/* View Switcher: Grid vs List */}
+                <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-1 shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("grid")}
+                        className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            viewMode === "grid" ? "bg-card text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
+                        )}
+                        title="Grid View"
+                    >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                        Grid
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("list")}
+                        className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            viewMode === "list" ? "bg-card text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
+                        )}
+                        title="List View"
+                    >
+                        <List className="h-3.5 w-3.5" />
+                        List
+                    </button>
+                </div>
+
                 <Button variant="outline" onClick={exportCsv} className="shrink-0">
                     <FileSpreadsheet className="h-4 w-4 mr-1" />
                     Export CSV
@@ -271,7 +309,7 @@ export function RequestsView({ onNavigate }) {
                         }
                     />
                 </Card>
-            ) : (
+            ) : viewMode === "grid" ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {requests.map((r) => {
                         const respondedCount = r.respondedSupplierIds.length;
@@ -339,6 +377,66 @@ export function RequestsView({ onNavigate }) {
                         );
                     })}
                 </div>
+            ) : (
+                <Card className="overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                            <thead className="bg-muted/60 border-b border-border">
+                                <tr className="text-left font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <th className="px-4 py-3">Reference</th>
+                                    <th className="px-4 py-3">Title</th>
+                                    <th className="px-4 py-3">Payment</th>
+                                    <th className="px-4 py-3">Status</th>
+                                    <th className="px-4 py-3 text-center">Items</th>
+                                    <th className="px-4 py-3 text-center">Suppliers</th>
+                                    <th className="px-4 py-3 text-center">Proformas</th>
+                                    <th className="px-4 py-3">Deadline</th>
+                                    <th className="px-4 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {requests.map((r) => (
+                                    <tr
+                                        key={r.id}
+                                        onClick={() => openDetail(r)}
+                                        className="hover:bg-accent/40 cursor-pointer transition-colors"
+                                    >
+                                        <td className="px-4 py-3 font-mono font-medium text-brand-700 dark:text-gold-400">
+                                            {r.referenceNo}
+                                        </td>
+                                        <td className="px-4 py-3 font-medium text-foreground">
+                                            {r.title}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={cn(
+                                                "text-[10px] px-2 py-0.5 rounded font-medium border",
+                                                r.paymentType === "credit"
+                                                    ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+                                                    : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
+                                            )}>
+                                                {r.paymentType === "credit" ? `Credit (${r.creditPeriod || 30}d)` : "Cash"}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <RequestStatusBadge status={r.status} />
+                                        </td>
+                                        <td className="px-4 py-3 text-center font-medium">{r.itemCount}</td>
+                                        <td className="px-4 py-3 text-center font-medium">{r.supplierCount}</td>
+                                        <td className="px-4 py-3 text-center font-medium">{r.proformaCount}</td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {new Date(r.deadline).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openDetail(r)}>
+                                                View
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
             )}
             <Pagination meta={meta} onPageChange={setPage} />
 
@@ -550,7 +648,30 @@ export function RequestsView({ onNavigate }) {
                                 </div>
                             </div>
 
-                            <DialogFooter className="mt-4">
+                             <DialogFooter className="mt-4 flex items-center justify-between">
+                                <div>
+                                    {(userCan(user, "requests.delete") || userCan(user, "requests.manage")) && (
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={async () => {
+                                                if (window.confirm(`Are you sure you want to delete request ${detail.referenceNo}?`)) {
+                                                    try {
+                                                        await api(`/api/proforma-requests/${detail.id}`, { method: "DELETE" });
+                                                        toast({ title: "Request deleted", description: detail.referenceNo });
+                                                        setDetailOpen(false);
+                                                        await load();
+                                                    } catch (e) {
+                                                        toast({ title: "Delete failed", description: e.message, variant: "destructive" });
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                            Delete Request
+                                        </Button>
+                                    )}
+                                </div>
                                 <Button variant="outline" onClick={() => setDetailOpen(false)}>
                                     Close
                                 </Button>
@@ -748,8 +869,8 @@ function CreateRequestDialog({
                 if (!v) reset();
             }}
         >
-            <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto p-6">
-                <DialogHeader>
+            <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+                <DialogHeader className="shrink-0">
                     <DialogTitle className="flex items-center gap-2 text-lg font-bold">
                         <FileText className="h-5 w-5 text-brand-600 dark:text-gold-400" />
                         Create Proforma Request (RFQ)
@@ -759,7 +880,7 @@ function CreateRequestDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-5 py-2">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-2">
                     {/* RFQ General Info */}
                     <div className="grid gap-3.5">
                         <div>
@@ -1075,7 +1196,7 @@ function CreateRequestDialog({
                     </div>
                 </div>
 
-                <DialogFooter className="pt-3 border-t">
+                <DialogFooter className="pt-3 border-t shrink-0">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancel
                     </Button>

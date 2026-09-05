@@ -30,6 +30,8 @@ class OrganizationController extends Controller
             'address' => ['sometimes', 'nullable', 'string'],
             'currency' => ['sometimes', 'string', 'max:10'],
             'approvalThreshold' => ['sometimes', 'numeric', 'min:0'],
+            'defaultCreditPeriod' => ['sometimes', 'integer', 'min:1', 'max:365'],
+            'creditPaymentTerms' => ['sometimes', 'nullable', 'string'],
         ]);
 
         $org->update([
@@ -37,7 +39,9 @@ class OrganizationController extends Controller
             'tin' => $data['tin'] ?? $org->tin,
             'address' => $data['address'] ?? $org->address,
             'currency' => $data['currency'] ?? $org->currency,
-            'approval_threshold' => $data['approvalThreshold'] ?? $org->approval_threshold,
+            'approval_threshold' => array_key_exists('approvalThreshold', $data) ? $data['approvalThreshold'] : $org->approval_threshold,
+            'default_credit_period' => array_key_exists('defaultCreditPeriod', $data) ? $data['defaultCreditPeriod'] : $org->default_credit_period,
+            'credit_payment_terms' => array_key_exists('creditPaymentTerms', $data) ? $data['creditPaymentTerms'] : $org->credit_payment_terms,
         ]);
 
         $this->audit->log($request->user()->name, 'organization', (string) $org->id, 'update', 'Updated organization profile.');
@@ -74,6 +78,8 @@ class OrganizationController extends Controller
             'logoPath' => $org->logo_path,
             'currency' => $org->currency,
             'approvalThreshold' => $org->approval_threshold !== null ? (float) $org->approval_threshold : null,
+            'defaultCreditPeriod' => $org->default_credit_period !== null ? (int) $org->default_credit_period : 30,
+            'creditPaymentTerms' => $org->credit_payment_terms ?? '',
         ];
     }
 }

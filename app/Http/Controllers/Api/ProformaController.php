@@ -139,6 +139,23 @@ class ProformaController extends Controller
         return response()->json($this->serialize($p->fresh(['supplier', 'request'])), 201);
     }
 
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $p = Proforma::findOrFail($id);
+        $ref = $p->reference_no;
+        $p->delete();
+
+        $this->audit->log(
+            $request->user()->name,
+            'proforma',
+            (string) $id,
+            'delete',
+            'Deleted proforma quotation #'.$id.' ('.$ref.')',
+        );
+
+        return response()->json(['ok' => true]);
+    }
+
     private function serialize(Proforma $p, bool $detailed = false): array
     {
         $base = [

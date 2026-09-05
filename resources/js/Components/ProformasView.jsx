@@ -17,6 +17,9 @@ import {
     FileSpreadsheet,
     PhoneCall,
     Paperclip,
+    LayoutGrid,
+    List,
+    Trash2,
 } from "lucide-react";
 import { Spinner } from "./ui/spinner.jsx";
 import { Card } from "./ui/card.jsx";
@@ -75,8 +78,15 @@ export function ProformasView() {
     const [manualOpen, setManualOpen] = useState(false);
     const [compareIds, setCompareIds] = useState([]);
     const [compareOpen, setCompareOpen] = useState(false);
+    const [viewMode, setViewMode] = useState("grid");
     const [user, setUser] = useState(null);
     const { toast } = useToast();
+
+    useEffect(() => {
+        api("/api/auth/me")
+            .then((d) => setUser(d.user))
+            .catch(() => {});
+    }, []);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -232,6 +242,35 @@ export function ProformasView() {
                     </SelectContent>
                 </Select>
                 <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
+                
+                {/* View Switcher: Grid vs List */}
+                <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-1 shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("grid")}
+                        className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            viewMode === "grid" ? "bg-card text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
+                        )}
+                        title="Grid View"
+                    >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                        Grid
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("list")}
+                        className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                            viewMode === "list" ? "bg-card text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
+                        )}
+                        title="List View"
+                    >
+                        <List className="h-3.5 w-3.5" />
+                        List
+                    </button>
+                </div>
+
                 {compareIds.length > 0 && (
                     <Button variant="outline" onClick={() => setCompareOpen(true)} className="shrink-0">
                         <Columns3 className="h-4 w-4 mr-1" />
@@ -277,7 +316,7 @@ export function ProformasView() {
                         }
                     />
                 </Card>
-            ) : (
+            ) : viewMode === "grid" ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {proformas.map((p) => {
                         const inCompare = compareIds.includes(p.id);
@@ -349,6 +388,89 @@ export function ProformasView() {
                         );
                     })}
                 </div>
+            ) : (
+                <Card className="overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                            <thead className="bg-muted/60 border-b border-border">
+                                <tr className="text-left font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <th className="px-4 py-3">Supplier</th>
+                                    <th className="px-4 py-3">Associated RFQ</th>
+                                    <th className="px-4 py-3">Total Amount</th>
+                                    <th className="px-4 py-3">Via</th>
+                                    <th className="px-4 py-3">Status</th>
+                                    <th className="px-4 py-3">Received</th>
+                                    <th className="px-4 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {proformas.map((p) => {
+                                    const inCompare = compareIds.includes(p.id);
+                                    return (
+                                        <tr
+                                            key={p.id}
+                                            onClick={() => openDetail(p)}
+                                            className={cn(
+                                                "hover:bg-accent/40 cursor-pointer transition-colors",
+                                                inCompare && "bg-brand-50/50 dark:bg-brand-950/20"
+                                            )}
+                                        >
+                                            <td className="px-4 py-3 font-medium text-foreground">
+                                                {p.supplier.legalName}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="font-mono text-[11px] font-semibold text-brand-700 dark:text-gold-400">
+                                                    {p.request.referenceNo}
+                                                </div>
+                                                <div className="text-muted-foreground truncate max-w-[200px]">
+                                                    {p.request.title}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 font-semibold text-foreground tabular-nums">
+                                                {p.totalAmount != null
+                                                    ? `${fmtMoney(p.totalAmount)} ${p.currency || "ETB"}`
+                                                    : "—"}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <ReceivedViaBadge via={p.receivedVia} />
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <ProformaStatusBadge status={p.status} />
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">
+                                                {timeAgo(p.receivedAt)}
+                                            </td>
+                                            <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <button
+                                                        className={cn(
+                                                            "px-2 py-1 text-[11px] rounded border transition-colors flex items-center gap-1",
+                                                            inCompare
+                                                                ? "bg-brand-600 text-white border-brand-600"
+                                                                : "bg-card text-muted-foreground border-border hover:border-brand-300"
+                                                        )}
+                                                        onClick={() => toggleCompare(p.id)}
+                                                    >
+                                                        <Columns3 className="h-3 w-3" />
+                                                        {inCompare ? "Compared" : "Compare"}
+                                                    </button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 text-xs"
+                                                        onClick={() => openDetail(p)}
+                                                    >
+                                                        View
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
             )}
             <Pagination meta={meta} onPageChange={setPage} />
 
@@ -537,7 +659,30 @@ export function ProformasView() {
                                     </div>
                                 )}
                             </div>
-                            <DialogFooter className="mt-4">
+                            <DialogFooter className="mt-4 flex items-center justify-between">
+                                <div>
+                                    {userCan(user, "proformas.delete") && (
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={async () => {
+                                                if (window.confirm("Are you sure you want to delete this proforma quotation?")) {
+                                                    try {
+                                                        await api(`/api/proformas/${detail.id}`, { method: "DELETE" });
+                                                        toast({ title: "Proforma deleted" });
+                                                        setDetailOpen(false);
+                                                        await load();
+                                                    } catch (e) {
+                                                        toast({ title: "Delete failed", description: e.message, variant: "destructive" });
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                            Delete Proforma
+                                        </Button>
+                                    )}
+                                </div>
                                 <Button variant="outline" onClick={() => setDetailOpen(false)}>
                                     Close
                                 </Button>
@@ -1323,18 +1468,18 @@ function ManualEntryDialog({ open, onOpenChange, suppliers, onDone }) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <PhoneCall className="h-5 w-5 text-brand-600" />
-                        Log Manual Response
+            <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+                <DialogHeader className="shrink-0">
+                    <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                        <PhoneCall className="h-5 w-5 text-brand-600 dark:text-gold-400" />
+                        Log Manual Supplier Response
                     </DialogTitle>
-                    <DialogDescription>
-                        Record a proforma a supplier sent outside Telegram — by phone, email, or in person.
+                    <DialogDescription className="text-xs text-muted-foreground">
+                        Record a proforma response received outside Telegram (phone call, email, or physical document).
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-4 py-2">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-2">
                     <div className="grid sm:grid-cols-2 gap-4">
                         <div>
                             <Label className="text-xs font-medium mb-1.5 block">Supplier *</Label>
@@ -1400,7 +1545,7 @@ function ManualEntryDialog({ open, onOpenChange, suppliers, onDone }) {
                     </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="pt-3 border-t shrink-0">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancel
                     </Button>
