@@ -45,9 +45,9 @@ export const ALL_PERMISSIONS: Permission[] = [
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     admin: ALL_PERMISSIONS,
-    purchaser: ["dashboard.view","suppliers.view","suppliers.manage","suppliers.import","requests.view","requests.create","requests.send","requests.edit","requests.delete","requests.manage","proformas.view","proformas.review","proformas.edit","proformas.delete","notifications.view","audit.view"],
-    finance: ["dashboard.view","proformas.view","proformas.review","proformas.edit","proformas.delete","notifications.view","audit.view"],
-    requester: ["dashboard.view","suppliers.view","requests.view","requests.create","notifications.view"],
+    purchaser: ["dashboard.view","suppliers.view","suppliers.manage","suppliers.import","requests.view","requests.create","requests.send","requests.edit","requests.delete","requests.manage","proformas.view","proformas.review","proformas.edit","proformas.delete","notifications.view","audit.view","settings.view"],
+    finance: ["dashboard.view","proformas.view","proformas.review","proformas.edit","proformas.delete","notifications.view","audit.view","settings.view"],
+    requester: ["dashboard.view","suppliers.view","requests.view","requests.create","notifications.view","settings.view"],
 };
 
 export const ROLE_LABELS: Record<Role, string> = {

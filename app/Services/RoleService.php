@@ -75,6 +75,7 @@ class RoleService
                 Permission::PROFORMAS_DELETE,
                 Permission::NOTIFICATIONS_VIEW,
                 Permission::AUDIT_VIEW,
+                Permission::SETTINGS_VIEW,
             ],
             UserRole::FINANCE->value => [
                 Permission::DASHBOARD_VIEW,
@@ -84,6 +85,7 @@ class RoleService
                 Permission::PROFORMAS_DELETE,
                 Permission::NOTIFICATIONS_VIEW,
                 Permission::AUDIT_VIEW,
+                Permission::SETTINGS_VIEW,
             ],
             UserRole::REQUESTER->value => [
                 Permission::DASHBOARD_VIEW,
@@ -91,6 +93,7 @@ class RoleService
                 Permission::REQUESTS_VIEW,
                 Permission::REQUESTS_CREATE,
                 Permission::NOTIFICATIONS_VIEW,
+                Permission::SETTINGS_VIEW,
             ],
         ];
     }
