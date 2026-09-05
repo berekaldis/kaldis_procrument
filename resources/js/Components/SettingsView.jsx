@@ -27,6 +27,7 @@ import { Spinner } from "./ui/spinner.jsx";
 import { Card } from "./ui/card.jsx";
 import { Button } from "./ui/button.jsx";
 import { Input } from "./ui/input.jsx";
+import { Textarea } from "./ui/textarea.jsx";
 import { Label } from "./ui/label.jsx";
 import { Badge } from "./ui/badge.jsx";
 import { Switch } from "./ui/switch.jsx";
