@@ -348,36 +348,20 @@ html, body {
     }
 
     /* ==========================================================================
-       SCENARIO A: Printing an open modal dialog (.kaldi-print-area exists)
+       SCENARIO A: Printing an open modal dialog (.kaldi-dialog-root exists)
        ========================================================================== */
+    body:has(.kaldi-dialog-root) #app,
     body:has(.kaldi-print-area) #app,
     body.kaldi-printing #app {
-        position: static !important;
-        display: block !important;
-        width: 100% !important;
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #ffffff !important;
-    }
-
-    /* Hide the sibling main content so ONLY the dialog document prints */
-    body:has(.kaldi-print-area) main > div > *:not(:has(.kaldi-print-area)),
-    body.kaldi-printing main > div > *:not(:has(.kaldi-print-area)) {
         display: none !important;
     }
 
-    /* Unconstrain all dialog ancestor containers from screen-fixed/scrolling boxes */
-    body:has(.kaldi-print-area) .fixed.inset-0,
-    body:has(.kaldi-print-area) .relative,
-    body:has(.kaldi-print-area) [role="dialog"],
-    body:has(.kaldi-print-area) div:has(> .kaldi-print-area),
-    body.kaldi-printing .fixed.inset-0,
-    body.kaldi-printing .relative,
-    body.kaldi-printing [role="dialog"],
-    body.kaldi-printing div:has(> .kaldi-print-area) {
+    /* Unconstrain dialog portal and modal wrappers so it paginates across paper */
+    .kaldi-dialog-root,
+    .kaldi-dialog-root > div,
+    [role="dialog"],
+    div:has(> .kaldi-print-area),
+    .kaldi-print-area {
         position: static !important;
         inset: auto !important;
         width: 100% !important;

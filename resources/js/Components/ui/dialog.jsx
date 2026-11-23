@@ -1,10 +1,17 @@
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 const DialogContext = createContext(null);
 
 export function Dialog({ open, onOpenChange, children, containerClassName }) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     useEffect(() => {
         if (!open) return;
         document.body.style.overflow = "hidden";
@@ -13,10 +20,11 @@ export function Dialog({ open, onOpenChange, children, containerClassName }) {
         };
     }, [open]);
 
-    if (!open) return null;
-    return (
+    if (!open || !mounted || typeof document === "undefined") return null;
+
+    const modalContent = (
         <DialogContext.Provider value={{ onOpenChange }}>
-            <div className={cn("fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto", containerClassName)}>
+            <div className={cn("kaldi-dialog-root fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto", containerClassName)}>
                 {/* Backdrop does NOT close modal on click per user requirement — only X button closes */}
                 <div
                     className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm animate-procurement-fade-in kaldi-no-print"
@@ -26,6 +34,8 @@ export function Dialog({ open, onOpenChange, children, containerClassName }) {
             </div>
         </DialogContext.Provider>
     );
+
+    return createPortal(modalContent, document.body);
 }
 
 export function DialogContent({ className, children, showClose = true, ...props }) {
