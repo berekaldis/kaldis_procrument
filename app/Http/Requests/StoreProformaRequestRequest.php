@@ -18,7 +18,7 @@ class StoreProformaRequestRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'deadline' => ['nullable', 'date'],
             'paymentType' => ['nullable', 'string', 'in:cash,credit'],
-            'creditPeriod' => ['nullable', 'integer', 'in:30,60,90'],
+            'creditPeriod' => ['nullable', 'integer', 'min:1', 'max:365'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.itemName' => ['required', 'string', 'max:255'],
             'items.*.description' => ['nullable', 'string'],

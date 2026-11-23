@@ -1162,29 +1162,48 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView, onReloa
                                                     <th
                                                         key={p.id}
                                                         className={cn(
-                                                            "text-right px-3 py-3 font-semibold whitespace-nowrap border-l border-border/50",
+                                                            "text-right px-3 py-3 font-semibold whitespace-nowrap border-l border-border/50 align-top",
                                                             isWinner && "bg-emerald-50/50 dark:bg-emerald-950/30"
                                                         )}
                                                     >
-                                                        <div className="flex flex-col items-end">
-                                                            <span className="font-bold text-foreground truncate max-w-[160px]">
+                                                        <div className="flex flex-col items-end gap-0.5">
+                                                            <span className="font-bold text-foreground truncate max-w-[170px]" title={p.supplier.legalName}>
                                                                 {p.supplier.legalName}
                                                             </span>
-                                                            <span className="text-[11px] font-normal text-muted-foreground">
-                                                                {p.request.referenceNo}
-                                                            </span>
-                                                            {p.filePath && (
-                                                                <a
-                                                                    href={`/${p.filePath}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="inline-flex items-center gap-1 text-[10px] text-brand-600 hover:underline mt-0.5 font-normal"
-                                                                    title={p.fileName || "View Quotation File"}
-                                                                >
-                                                                    <Paperclip className="h-3 w-3" />
-                                                                    <span className="truncate max-w-[110px]">{p.fileName || "Attached Quote"}</span>
-                                                                </a>
+                                                            <div className="flex items-center gap-1 mt-0.5">
+                                                                <span className="text-[11px] font-normal text-muted-foreground">
+                                                                    {p.request.referenceNo}
+                                                                </span>
+                                                                <ProformaStatusBadge status={p.status} />
+                                                            </div>
+                                                            {p.supplier?.paymentTerms && (
+                                                                <span className="text-[10px] text-muted-foreground">
+                                                                    Terms: {p.supplier.paymentTerms}
+                                                                </span>
                                                             )}
+                                                            <div className="flex items-center gap-1.5 mt-1 kaldi-no-print">
+                                                                {p.filePath && (
+                                                                    <a
+                                                                        href={`/${p.filePath}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="inline-flex items-center gap-1 text-[11px] text-brand-600 hover:underline font-normal"
+                                                                        title={p.fileName || "View Quotation File"}
+                                                                    >
+                                                                        <Paperclip className="h-3 w-3" />
+                                                                        <span>File</span>
+                                                                    </a>
+                                                                )}
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-6 text-[11px] px-1.5 text-primary hover:bg-primary/10"
+                                                                    onClick={() => onView(p)}
+                                                                >
+                                                                    <Eye className="h-3 w-3 mr-0.5" />
+                                                                    View
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </th>
                                                 );
@@ -1211,11 +1230,6 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView, onReloa
                                                         const isBest = unitPrice != null && unitPrice === bestPricePerItem[name];
                                                         const displayVal = viewMode === "unit" ? unitPrice : lineTotal;
 
-                                                        const diffVsAvg =
-                                                            unitPrice != null && avg > 0
-                                                                ? (((unitPrice - avg) / avg) * 100).toFixed(0)
-                                                                : null;
-
                                                         return (
                                                             <td
                                                                 key={p.id}
@@ -1226,27 +1240,11 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView, onReloa
                                                                 )}
                                                             >
                                                                 {displayVal != null ? (
-                                                                    <div className="flex flex-col items-end">
-                                                                        <div className="flex items-center gap-1 font-mono">
-                                                                            {isBest && (
-                                                                                <Trophy className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                                                            )}
-                                                                            <span>{fmtMoney(displayVal)}</span>
-                                                                        </div>
-                                                                        {diffVsAvg != null && (
-                                                                            <span
-                                                                                className={cn(
-                                                                                    "text-[10px]",
-                                                                                    Number(diffVsAvg) < 0
-                                                                                        ? "text-emerald-600 font-medium dark:text-emerald-400"
-                                                                                        : Number(diffVsAvg) > 0
-                                                                                        ? "text-rose-500"
-                                                                                        : "text-muted-foreground"
-                                                                                )}
-                                                                            >
-                                                                                {Number(diffVsAvg) <= 0 ? `${diffVsAvg}%` : `+${diffVsAvg}%`} vs avg
-                                                                            </span>
+                                                                    <div className="flex items-center justify-end gap-1.5 font-mono">
+                                                                        {isBest && (
+                                                                            <Trophy className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                                                         )}
+                                                                        <span>{fmtMoney(displayVal)}</span>
                                                                     </div>
                                                                 ) : p.filePath ? (
                                                                     <div className="flex flex-col items-end text-muted-foreground">
@@ -1335,63 +1333,6 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView, onReloa
                                 💡 Select proformas with line items or attached PDF/photo quotations to compare them side-by-side.
                             </div>
                         )}
-
-                        {/* Supplier Summary Cards */}
-                        <div
-                            className="grid gap-4 kaldi-no-print"
-                            style={{ gridTemplateColumns: `repeat(${Math.min(proformas.length, 4)}, minmax(0, 1fr))` }}
-                        >
-                            {proformas.map((p) => {
-                                const isWinner = winner?.proforma?.id === p.id;
-                                return (
-                                    <Card
-                                        key={p.id}
-                                        className={cn(
-                                            "p-4 flex flex-col transition-all",
-                                            isWinner && "ring-2 ring-emerald-500 bg-emerald-50/10 dark:bg-emerald-950/20"
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between mb-2">
-                                            <ReceivedViaBadge via={p.receivedVia} />
-                                            <ProformaStatusBadge status={p.status} />
-                                        </div>
-                                        <div className="font-semibold text-sm mb-0.5 truncate">{p.supplier.legalName}</div>
-                                        <div className="text-xs text-muted-foreground mb-3 truncate">{p.request.referenceNo}</div>
-
-                                        <div className="space-y-1.5 text-xs text-muted-foreground flex-1">
-                                            <div>
-                                                <span className="font-medium text-foreground">Received:</span> {fmtDate(p.receivedAt)}
-                                            </div>
-                                            {p.supplier.paymentTerms && (
-                                                <div className="truncate">
-                                                    <span className="font-medium text-foreground">Terms:</span> {p.supplier.paymentTerms}
-                                                </div>
-                                            )}
-                                            {p.fileName && (
-                                                <div className="flex items-center gap-1 truncate text-foreground">
-                                                    <File className="h-3.5 w-3.5 shrink-0 text-brand-600" />
-                                                    <span className="truncate">{p.fileName}</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="mt-3 pt-3 border-t flex gap-1.5">
-                                            {p.filePath && (
-                                                <a href={`/${p.filePath}`} target="_blank" rel="noopener noreferrer" className="flex-1">
-                                                    <Button size="sm" variant="outline" className="w-full text-xs">
-                                                        <Download className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </a>
-                                            )}
-                                            <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => onView(p)}>
-                                                <Eye className="h-3.5 w-3.5 mr-1" />
-                                                View
-                                            </Button>
-                                        </div>
-                                    </Card>
-                                );
-                            })}
-                        </div>
                     </div>
                 )}
 

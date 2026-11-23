@@ -18,7 +18,7 @@ class UpdateProformaRequestRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'deadline' => ['nullable', 'date'],
             'paymentType' => ['nullable', 'string', 'in:cash,credit'],
-            'creditPeriod' => ['nullable', 'integer', 'in:30,60,90'],
+            'creditPeriod' => ['nullable', 'integer', 'min:1', 'max:365'],
             'status' => ['sometimes', 'in:draft,sent,closed,cancelled,partial,completed'],
         ];
     }

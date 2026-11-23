@@ -810,13 +810,11 @@ function CreateRequestDialog({
     useEffect(() => {
         if (open) {
             api("/api/categories").then((d) => setCategories(d.categories || [])).catch(() => {});
-            if (!suppliers || suppliers.length === 0) {
-                api("/api/suppliers")
-                    .then((d) => setLocalSuppliers(Array.isArray(d) ? d : (d.data || [])))
-                    .catch(() => {});
-            }
+            api("/api/suppliers")
+                .then((d) => setLocalSuppliers(Array.isArray(d) ? d : (d.data || [])))
+                .catch(() => {});
         }
-    }, [open, suppliers]);
+    }, [open]);
 
     const reset = () => {
         setTitle("");
@@ -879,6 +877,10 @@ function CreateRequestDialog({
     const save = async () => {
         if (!title.trim()) {
             toast({ title: "Title is required", variant: "destructive" });
+            return;
+        }
+        if (!deadline) {
+            toast({ title: "Response deadline is required", variant: "destructive" });
             return;
         }
         const validItems = items.filter((it) => it.itemName?.trim());
@@ -1012,14 +1014,14 @@ function CreateRequestDialog({
                                     </button>
                                 </div>
                                 {paymentType === "credit" && (
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                         {[30, 60, 90].map((days) => (
                                             <button
                                                 key={days}
                                                 type="button"
                                                 onClick={() => setCreditPeriod(days)}
                                                 className={cn(
-                                                    "px-2 py-0.5 text-xs rounded border transition-colors",
+                                                    "px-2.5 py-1 text-xs rounded border transition-colors",
                                                     creditPeriod === days
                                                         ? "bg-primary text-primary-foreground border-primary font-semibold"
                                                         : "bg-card text-foreground hover:bg-accent border-border"
@@ -1028,6 +1030,18 @@ function CreateRequestDialog({
                                                 {days}d
                                             </button>
                                         ))}
+                                        <div className="flex items-center gap-1 ml-1">
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                max="365"
+                                                value={creditPeriod || ""}
+                                                onChange={(e) => setCreditPeriod(Math.max(1, parseInt(e.target.value) || 0))}
+                                                className="h-8 w-16 text-xs text-center px-1 font-semibold"
+                                                placeholder="Days"
+                                            />
+                                            <span className="text-[11px] text-muted-foreground">days</span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1132,11 +1146,18 @@ function CreateRequestDialog({
 
                         {/* Multi-Select Dropdown Combobox */}
                         <div ref={supplierDropdownRef}>
-                            <button
-                                type="button"
+                            <div
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        setSupplierDropdownOpen(!supplierDropdownOpen);
+                                    }
+                                }}
                                 onClick={() => setSupplierDropdownOpen(!supplierDropdownOpen)}
                                 className={cn(
-                                    "w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg border bg-background text-sm transition-all text-left",
+                                    "w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg border bg-background text-sm transition-all text-left cursor-pointer select-none",
                                     supplierDropdownOpen ? "ring-2 ring-primary border-primary" : "hover:border-border/80"
                                 )}
                             >
@@ -1166,7 +1187,7 @@ function CreateRequestDialog({
                                     )}
                                     <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", supplierDropdownOpen && "rotate-180")} />
                                 </div>
-                            </button>
+                            </div>
 
                             {/* Dropdown Content - Rendered inline so it never clips! */}
                             {supplierDropdownOpen && (
@@ -1265,7 +1286,7 @@ function CreateRequestDialog({
                                                         >
                                                             <Checkbox
                                                                 checked={checked}
-                                                                onCheckedChange={() => toggleSupplier(s.id)}
+                                                                className="pointer-events-none"
                                                             />
                                                             <div className="min-w-0 flex-1">
                                                                 <div className="font-semibold text-foreground text-xs truncate">

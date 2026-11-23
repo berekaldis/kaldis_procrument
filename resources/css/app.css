@@ -311,27 +311,40 @@ html, body {
         print-color-adjust: exact !important;
     }
 
-    /* Hide UI chrome, navigation, headers, footers, sidebars, modal backdrops */
-    body > *:not(#app),
+    /* Hide the background app chrome when printing a dialog with kaldi-print-area */
+    body:has(.kaldi-print-area) #app {
+        display: none !important;
+    }
+
+    /* Hide interactive UI controls, buttons, toolbars, and modal backdrops */
     header,
     nav,
     aside,
-    .kaldi-no-print,
     button,
+    .kaldi-no-print,
     [role="dialog"] button,
+    [data-radix-dialog-overlay],
+    .fixed.inset-0.bg-black\/80,
     .fixed.inset-0.bg-slate-950\/50,
     .backdrop-blur-sm,
     .animate-procurement-fade-in {
         display: none !important;
     }
 
-    /* Unconstrain dialog containers so they paginate properly across pages */
-    body,
-    #app,
+    /* Radix UI Portals MUST stay visible and unconstrained for print */
+    [data-radix-portal] {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    /* Unconstrain dialog wrappers so paper pagination works across multiple pages */
+    [data-radix-portal] > div,
+    [role="dialog"],
     div:has(> .kaldi-print-area),
-    .fixed.inset-0,
-    .kaldi-print-area,
-    [role="dialog"] {
+    .kaldi-print-area {
         position: static !important;
         inset: auto !important;
         width: 100% !important;
@@ -343,7 +356,8 @@ html, body {
         margin: 0 !important;
         border: none !important;
         box-shadow: none !important;
-        background: transparent !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
         transform: none !important;
     }
 

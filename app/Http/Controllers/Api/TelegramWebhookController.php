@@ -167,8 +167,9 @@ class TelegramWebhookController extends Controller
         $newLang = TelegramMessages::resolveLanguageChoice($text);
         if ($newLang !== null) {
             $session->clearPending();
+            $confirm = TelegramMessages::get('language_changed', $newLang);
             $msg = TelegramMessages::get('welcome_unlinked', $newLang, ['chat_id' => $chatId]);
-            $this->telegram->sendRaw($chatId, $msg);
+            $this->telegram->sendRaw($chatId, "✅ <b>{$confirm}</b>\n\n{$msg}", removeKeyboard: true);
 
             return;
         }
@@ -211,7 +212,9 @@ class TelegramWebhookController extends Controller
         if ($newLang !== null) {
             $supplier->update(['language' => $newLang]);
             $session->clearPending();
-            $this->telegram->sendRaw($chatId, TelegramMessages::get('language_changed', $newLang));
+            $confirm = TelegramMessages::get('language_changed', $newLang);
+            $welcome = TelegramMessages::get('welcome_linked', $newLang, ['name' => $supplier->legal_name]);
+            $this->telegram->sendRaw($chatId, "✅ <b>{$confirm}</b>\n\n{$welcome}", removeKeyboard: true);
 
             return;
         }
