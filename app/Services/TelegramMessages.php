@@ -134,10 +134,10 @@ class TelegramMessages
     {
         $normalized = mb_strtolower(trim($text));
 
-        if (str_starts_with($normalized, 'english') || $normalized === 'en' || $normalized === '1') {
+        if ($normalized === 'english' || $normalized === 'en') {
             return 'en';
         }
-        if (str_contains($text, 'አማርኛ') || $normalized === 'am' || str_starts_with($normalized, 'amharic') || $normalized === '2') {
+        if (str_contains($text, 'አማርኛ') || $normalized === 'am' || $normalized === 'amharic') {
             return 'am';
         }
 

@@ -184,6 +184,14 @@ class TelegramWebhookController extends Controller
         $chatId = $supplier->telegram_chat_id;
         $lower = strtolower(trim($text));
 
+        // 1. If user is currently choosing between multiple open proforma requests, handle choice first!
+        if ($session->pending_action === 'select_request') {
+            $this->handleRequestSelection($supplier, $session, $text, $lang);
+
+            return;
+        }
+
+        // 2. Start command
         if ($lower === '/start') {
             $msg = TelegramMessages::get('welcome_linked', $lang, ['name' => $supplier->legal_name]);
             $this->sendWelcomeWithInlineLang($chatId, $msg);
@@ -191,12 +199,14 @@ class TelegramWebhookController extends Controller
             return;
         }
 
+        // 3. Language command
         if ($lower === '/language' || $lower === '/lang') {
             $this->sendInlineLanguagePicker($chatId);
 
             return;
         }
 
+        // 4. Explicit language word
         $newLang = TelegramMessages::resolveLanguageChoice($text);
         if ($newLang !== null) {
             $supplier->update(['language' => $newLang]);
@@ -206,12 +216,7 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        if ($session->pending_action === 'select_request') {
-            $this->handleRequestSelection($supplier, $session, $text, $lang);
-
-            return;
-        }
-
+        // 5. Proforma quotation submission
         $this->handleProformaSubmission($supplier, $session, $message, $text, $lang);
     }
 
