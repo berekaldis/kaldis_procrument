@@ -119,7 +119,7 @@ class TelegramWebhookController extends Controller
     {
         $id = (string) ($callbackQuery['id'] ?? '');
         $data = (string) ($callbackQuery['data'] ?? '');
-        $chatId = (string) ($callbackQuery['message']['chat']['id'] ?? '');
+        $chatId = (string) ($callbackQuery['message']['chat']['id'] ?? $callbackQuery['from']['id'] ?? '');
 
         if ($chatId === '') {
             return;
@@ -139,7 +139,14 @@ class TelegramWebhookController extends Controller
 
             $confirmText = TelegramMessages::get('language_changed', $lang);
             $this->telegram->answerCallbackQuery($id, $confirmText);
-            $this->telegram->sendRaw($chatId, $confirmText);
+
+            if ($supplier) {
+                $welcome = TelegramMessages::get('welcome_linked', $lang, ['name' => $supplier->legal_name]);
+            } else {
+                $welcome = TelegramMessages::get('welcome_unlinked', $lang, ['chat_id' => $chatId]);
+            }
+
+            $this->telegram->sendRaw($chatId, "✅ <b>{$confirmText}</b>\n\n{$welcome}");
 
             return;
         }

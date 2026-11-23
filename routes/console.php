@@ -8,21 +8,31 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Artisan::command('telegram:webhook:set {url : Public HTTPS base URL, e.g. https://your-domain.com}', function (string $url) {
+Artisan::command('telegram:webhook:set {url? : Public HTTPS base URL, e.g. https://procurement.kaldisbunnaet.com}', function (?string $url = null) {
     /** @var TelegramService $telegram */
     $telegram = app(TelegramService::class);
 
     if (! $telegram->isConfigured()) {
-        $this->error('TELEGRAM_BOT_TOKEN is not set in .env.');
+        $this->error('Telegram bot token is not configured in Settings or .env.');
 
         return 1;
     }
 
-    $secret = config('services.telegram_webhook_secret');
+    $secret = $telegram->webhookSecret();
     if (empty($secret)) {
-        $this->error('TELEGRAM_WEBHOOK_SECRET is not set in .env. Generate one with: php -r "echo bin2hex(random_bytes(20));"');
+        $this->error('Telegram webhook secret is not set.');
 
         return 1;
+    }
+
+    if (! $url) {
+        $info = $telegram->getWebhookInfo();
+        if ($info && ! empty($info['url'])) {
+            $parts = explode('/api/telegram/webhook/', $info['url']);
+            $url = $parts[0] ?: 'https://procurement.kaldisbunnaet.com';
+        } else {
+            $url = 'https://procurement.kaldisbunnaet.com';
+        }
     }
 
     $webhookUrl = rtrim($url, '/').'/api/telegram/webhook/'.$secret;
@@ -37,7 +47,7 @@ Artisan::command('telegram:webhook:set {url : Public HTTPS base URL, e.g. https:
     $this->info('Webhook registered: '.$webhookUrl);
 
     return 0;
-})->purpose('Register the Telegram bot webhook at a public URL');
+})->purpose('Register the Telegram bot webhook at a public URL with callback_query support');
 
 Artisan::command('telegram:webhook:info', function () {
     /** @var TelegramService $telegram */
