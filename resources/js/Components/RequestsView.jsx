@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
     FileText,
     Plus,
@@ -453,207 +453,238 @@ export function RequestsView({ onNavigate }) {
 
             {/* Detail dialog */}
             <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-                <DialogContent className="sm:max-w-3xl max-h-[88vh] overflow-y-auto">
+                <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-6 sm:p-7 overflow-hidden">
                     {detail ? (
                         <>
-                            <DialogHeader>
-                                <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                            <DialogHeader className="shrink-0 space-y-2 pb-1">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-brand-700 bg-brand-50 dark:bg-gold-950 dark:text-gold-300 px-2 py-0.5 rounded text-sm font-bold">
+                                        <span className="font-mono text-primary bg-primary/10 px-2.5 py-0.5 rounded text-xs font-bold tracking-wide">
                                             {detail.referenceNo}
                                         </span>
                                         <RequestStatusBadge status={detail.status} />
                                     </div>
                                     <div className="flex items-center gap-1 kaldi-no-print">
-                                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={printRequest}>
+                                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2.5 text-muted-foreground hover:text-foreground" onClick={printRequest}>
                                             <Printer className="h-3.5 w-3.5 mr-1" />
                                             Print
                                         </Button>
                                         {userCan(user, "requests.create") && (
-                                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={cloneRequest} disabled={cloning}>
+                                            <Button variant="ghost" size="sm" className="h-7 text-xs px-2.5 text-muted-foreground hover:text-foreground" onClick={cloneRequest} disabled={cloning}>
                                                 {cloning ? <Spinner className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
                                                 Duplicate
                                             </Button>
                                         )}
                                     </div>
                                 </div>
-                                <DialogTitle className="text-xl font-bold text-foreground">
+                                <DialogTitle className="text-lg font-bold text-foreground">
                                     {detail.title}
                                 </DialogTitle>
                             </DialogHeader>
 
-                            <div className="space-y-5 my-2 kaldi-print-area">
-                                <div className="hidden print:block mb-4">
-                                    <div className="font-mono text-lg font-semibold">{detail.referenceNo}</div>
-                                    <div className="text-base">{detail.title}</div>
-                                </div>
-                                {detail.description && (
-                                    <Card className="p-3.5 bg-muted/30">
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1 font-semibold">
-                                            Description
+                            {/* Scrollable Body */}
+                            <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-1 kaldi-print-area text-xs">
+                                <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h1 className="text-xl font-bold tracking-tight text-slate-900">KALDI'S COFFEE PROCUREMENT</h1>
+                                            <p className="text-xs text-slate-600">Official Proforma Request (RFQ) Document</p>
                                         </div>
-                                        <p className="text-sm whitespace-pre-wrap">{detail.description}</p>
-                                    </Card>
+                                        <div className="text-right">
+                                            <div className="font-mono text-base font-bold text-slate-900">{detail.referenceNo}</div>
+                                            <div className="text-xs text-slate-500">Status: {detail.status?.toUpperCase()}</div>
+                                            <div className="text-xs text-slate-500">Date: {new Date().toLocaleDateString()}</div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 text-sm font-semibold text-slate-900">{detail.title}</div>
+                                </div>
+
+                                {/* 4-cell compact metadata summary strip */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-lg bg-muted/30 border border-border/60">
+                                    <div>
+                                        <div className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Requested By</div>
+                                        <div className="text-xs font-semibold text-foreground mt-0.5 truncate">{detail.requestedBy || "—"}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Payment Term</div>
+                                        <div className="text-xs font-semibold text-foreground mt-0.5">
+                                            {detail.paymentType === "credit" ? `Credit (${detail.creditPeriod || 30}d)` : "Cash"}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Deadline</div>
+                                        <div className={cn(
+                                            "text-xs font-semibold flex items-center gap-1 mt-0.5",
+                                            isOverdue(detail.deadline) && "text-rose-600 font-bold"
+                                        )}>
+                                            <Calendar className="h-3 w-3 shrink-0" />
+                                            <span className="truncate">{fmtDate(detail.deadline)}</span>
+                                            {isOverdue(detail.deadline) && <span className="text-[10px]">(overdue)</span>}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Quotations</div>
+                                        <div className="text-xs font-semibold text-foreground mt-0.5">
+                                            {detail.proformas?.length || 0} / {detail.suppliers?.length || 0} received
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {detail.description && (
+                                    <div className="rounded-md bg-muted/20 border-l-2 border-primary/70 px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">
+                                        {detail.description}
+                                    </div>
                                 )}
 
-                                <div className="grid grid-cols-3 gap-3">
-                                    <Card className="p-3.5">
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide">Requested by</div>
-                                        <div className="text-sm font-semibold text-foreground mt-0.5">{detail.requestedBy}</div>
-                                    </Card>
-                                    <Card className="p-3.5">
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide">Payment Term</div>
-                                        <div className="text-sm font-semibold text-foreground mt-0.5">
-                                            {detail.paymentType === "credit" ? `Credit (${detail.creditPeriod || 30} Days)` : "Cash"}
-                                        </div>
-                                    </Card>
-                                    <Card className="p-3.5">
-                                        <div className="text-xs text-muted-foreground uppercase tracking-wide">Deadline</div>
-                                        <div className={cn(
-                                            "text-sm font-semibold flex items-center gap-1 mt-0.5",
-                                            isOverdue(detail.deadline) && "text-rose-600"
-                                        )}>
-                                            <Calendar className="h-3.5 w-3.5" />
-                                            {fmtDate(detail.deadline)}
-                                            {isOverdue(detail.deadline) && " (overdue)"}
-                                        </div>
-                                    </Card>
+                                {/* Requested Items Table */}
+                                <div className="rounded-lg border border-border/70 overflow-hidden">
+                                    <div className="bg-muted/40 px-3.5 py-2 border-b border-border/60 flex items-center justify-between font-semibold">
+                                        <span className="flex items-center gap-1.5 text-foreground text-xs">
+                                            <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                                            Requested Items ({detail.items.length})
+                                        </span>
+                                    </div>
+                                    <table className="w-full text-xs">
+                                        <thead className="bg-muted/15 text-muted-foreground border-b border-border/40 text-[11px] uppercase tracking-wider">
+                                            <tr>
+                                                <th className="px-3 py-1.5 text-left font-medium w-8">#</th>
+                                                <th className="px-3 py-1.5 text-left font-medium">Item Name</th>
+                                                <th className="px-3 py-1.5 text-right font-medium w-24">Quantity</th>
+                                                <th className="px-3 py-1.5 text-left font-medium w-20">Unit</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border/40">
+                                            {detail.items.map((it, i) => (
+                                                <tr key={it.id || i} className="hover:bg-muted/20 transition-colors">
+                                                    <td className="px-3 py-2 text-muted-foreground font-mono text-[11px]">{i + 1}</td>
+                                                    <td className="px-3 py-2 font-medium text-foreground">
+                                                        <div>{it.itemName}</div>
+                                                        {it.description && <div className="text-[11px] text-muted-foreground font-normal">{it.description}</div>}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right font-semibold font-mono">{it.quantity}</td>
+                                                    <td className="px-3 py-2 text-muted-foreground">{it.unit}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
 
-                                {/* Items */}
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Package className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-semibold text-sm">Requested Items ({detail.items.length})</h3>
+                                {/* Invited Suppliers */}
+                                <div className="rounded-lg border border-border/70 overflow-hidden">
+                                    <div className="bg-muted/40 px-3.5 py-2 border-b border-border/60 flex items-center justify-between font-semibold">
+                                        <span className="flex items-center gap-1.5 text-foreground text-xs">
+                                            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                            Invited Suppliers ({detail.suppliers.length})
+                                        </span>
+                                        <span className="text-[11px] font-normal text-muted-foreground">
+                                            {detail.proformas?.length || 0} response(s)
+                                        </span>
                                     </div>
-                                    <div className="grid sm:grid-cols-2 gap-2">
-                                        {detail.items.map((it, i) => (
-                                            <Card key={it.id} className="p-3">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="grid place-items-center h-7 w-7 rounded-full bg-brand-50 text-brand-700 dark:bg-gold-950 dark:text-gold-300 text-xs font-bold shrink-0">
-                                                        {i + 1}
-                                                    </div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="font-semibold text-sm">{it.itemName}</div>
-                                                        {it.description && (
-                                                            <div className="text-xs text-muted-foreground mt-0.5">
-                                                                {it.description}
+                                    <div className="divide-y divide-border/40">
+                                        {detail.suppliers.length === 0 ? (
+                                            <div className="p-3 text-center text-xs text-muted-foreground">
+                                                No suppliers invited yet.
+                                            </div>
+                                        ) : (
+                                            detail.suppliers.map((rs) => {
+                                                const matched = detail.proformas?.find((p) => p.supplier?.id === rs.supplier?.id);
+                                                return (
+                                                    <div key={rs.id} className="px-3.5 py-2 flex items-center justify-between gap-3 hover:bg-muted/20 transition-colors">
+                                                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                                            <div className="grid place-items-center h-6 w-6 rounded-full bg-primary/10 text-primary text-[11px] font-bold shrink-0">
+                                                                {rs.supplier?.legalName?.charAt(0) || "S"}
                                                             </div>
-                                                        )}
-                                                        <div className="text-xs text-muted-foreground mt-0.5">
-                                                            <span className="font-bold text-foreground">{it.quantity}</span> {it.unit}
+                                                            <div className="min-w-0">
+                                                                <div className="font-medium text-foreground truncate text-xs">
+                                                                    {rs.supplier?.legalName || "Unknown Supplier"}
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                                                    <VerificationBadge status={rs.supplier?.verificationStatus} />
+                                                                    {rs.supplier?.telegramLinked || rs.supplier?.telegramChatId ? (
+                                                                        <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 font-medium text-[10px]">
+                                                                            Telegram
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span>Manual</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            <SupplierResponseStatus status={rs.status} />
+                                                            {matched && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-6 text-[11px] px-2 text-primary hover:text-primary hover:bg-primary/10 font-medium"
+                                                                    onClick={() => {
+                                                                        setDetailOpen(false);
+                                                                        onNavigate("proformas");
+                                                                    }}
+                                                                >
+                                                                    View Quote →
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </Card>
-                                        ))}
+                                                );
+                                            })
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Suppliers */}
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-semibold text-sm">
-                                            Invited Suppliers ({detail.suppliers.length})
-                                        </h3>
-                                    </div>
-                                    <div className="grid sm:grid-cols-2 gap-2">
-                                        {detail.suppliers.map((rs) => (
-                                            <Card key={rs.id} className="p-3 flex items-center gap-3">
-                                                <div className="grid place-items-center h-8 w-8 rounded-full bg-muted text-xs font-bold shrink-0">
-                                                    {rs.supplier.legalName.charAt(0)}
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="font-medium text-sm truncate">{rs.supplier.legalName}</div>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <VerificationBadge status={rs.supplier.verificationStatus} />
-                                                        {rs.supplier.telegramChatId && (
-                                                            <Badge variant="outline" className="text-[10px] py-0 bg-cyan-50 text-cyan-700 border-cyan-200">
-                                                                Telegram
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <SupplierResponseStatus status={rs.status} />
-                                            </Card>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Proformas received */}
-                                {detail.proformas.length > 0 && (
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Inbox className="h-4 w-4 text-muted-foreground" />
-                                            <h3 className="font-semibold text-sm">
-                                                Proformas Received ({detail.proformas.length})
-                                            </h3>
+                                {/* Proformas Received (if any) */}
+                                {detail.proformas && detail.proformas.length > 0 && (
+                                    <div className="rounded-lg border border-border/70 overflow-hidden">
+                                        <div className="bg-muted/40 px-3.5 py-2 border-b border-border/60 flex items-center justify-between font-semibold">
+                                            <span className="flex items-center gap-1.5 text-foreground text-xs">
+                                                <Inbox className="h-3.5 w-3.5 text-muted-foreground" />
+                                                Received Proforma Documents ({detail.proformas.length})
+                                            </span>
                                         </div>
-                                        <div className="grid sm:grid-cols-2 gap-2">
+                                        <div className="divide-y divide-border/40">
                                             {detail.proformas.map((p) => (
-                                                <Card
+                                                <div
                                                     key={p.id}
-                                                    className="p-3 flex items-center gap-3 cursor-pointer hover:bg-accent/40"
+                                                    className="px-3.5 py-2 flex items-center justify-between gap-3 hover:bg-muted/20 cursor-pointer transition-colors"
                                                     onClick={() => {
                                                         setDetailOpen(false);
                                                         onNavigate("proformas");
                                                     }}
                                                 >
-                                                    <div className="grid place-items-center h-8 w-8 rounded-md bg-gold-50 text-gold-700 shrink-0">
-                                                        <FileText className="h-4 w-4" />
-                                                    </div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="font-medium text-sm truncate">{p.supplier.legalName}</div>
-                                                        <div className="text-xs text-muted-foreground">
-                                                            {p.fileName || "Text message"} · {timeAgo(p.receivedAt)}
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <FileText className="h-4 w-4 text-primary shrink-0" />
+                                                        <div className="min-w-0">
+                                                            <div className="font-medium text-foreground truncate text-xs">
+                                                                {p.supplier?.legalName}
+                                                                <span className="font-mono text-muted-foreground text-[11px] ml-1.5">
+                                                                    ({p.referenceNo || p.fileName || "Quote Document"})
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-[11px] text-muted-foreground">
+                                                                {timeAgo(p.receivedAt)}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <ReceivedViaBadge via={p.receivedVia} />
-                                                    <ProformaStatusBadge status={p.status} />
-                                                </Card>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <ReceivedViaBadge via={p.receivedVia} />
+                                                        <ProformaStatusBadge status={p.status} />
+                                                    </div>
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
                                 )}
-
-                                {/* Actions */}
-                                <div className="pt-3 border-t space-y-2 kaldi-no-print">
-                                    {detail.status === "draft" && userCan(user, "requests.send") && (
-                                        <Button onClick={sendToSuppliers} disabled={sending} className="w-full">
-                                            {sending ? (
-                                                <Spinner className="h-4 w-4 mr-1" />
-                                            ) : (
-                                                <Send className="h-4 w-4 mr-1" />
-                                            )}
-                                            Approve & Send to {detail.suppliers.length} Suppliers via Telegram
-                                        </Button>
-                                    )}
-                                    {detail.status === "draft" && (
-                                        <p className="text-xs text-muted-foreground text-center">
-                                            Approving this proforma request will notify all selected suppliers through the Telegram bot and move the
-                                            request to "Sent" status.
-                                        </p>
-                                    )}
-                                    {["sent", "partially_received", "received"].includes(detail.status) && (
-                                        <Button onClick={closeRequest} variant="outline" className="w-full">
-                                            Close Request
-                                        </Button>
-                                    )}
-                                    {detail.status === "draft" && detail.suppliers.length === 0 && (
-                                        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded p-2 text-center">
-                                            Add at least one supplier before sending.
-                                        </div>
-                                    )}
-                                </div>
                             </div>
 
-                             <DialogFooter className="mt-4 flex items-center justify-between">
+                            {/* Footer Actions */}
+                            <DialogFooter className="mt-2 pt-3 border-t border-border flex items-center justify-between gap-2 shrink-0 kaldi-no-print">
                                 <div>
                                     {(userCan(user, "requests.delete") || userCan(user, "requests.manage")) && (
                                         <Button
-                                            variant="destructive"
+                                            variant="ghost"
                                             size="sm"
+                                            className="h-8 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                                             onClick={async () => {
                                                 if (window.confirm(`Are you sure you want to delete request ${detail.referenceNo}?`)) {
                                                     try {
@@ -672,9 +703,31 @@ export function RequestsView({ onNavigate }) {
                                         </Button>
                                     )}
                                 </div>
-                                <Button variant="outline" onClick={() => setDetailOpen(false)}>
-                                    Close
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    {detail.status === "draft" && userCan(user, "requests.send") && (
+                                        <Button
+                                            size="sm"
+                                            className="h-8 text-xs"
+                                            onClick={sendToSuppliers}
+                                            disabled={sending || detail.suppliers.length === 0}
+                                        >
+                                            {sending ? (
+                                                <Spinner className="h-3.5 w-3.5 mr-1.5" />
+                                            ) : (
+                                                <Send className="h-3.5 w-3.5 mr-1.5" />
+                                            )}
+                                            Send via Telegram ({detail.suppliers.length})
+                                        </Button>
+                                    )}
+                                    {["sent", "partially_received", "received"].includes(detail.status) && (
+                                        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={closeRequest}>
+                                            Close Request
+                                        </Button>
+                                    )}
+                                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setDetailOpen(false)}>
+                                        Close
+                                    </Button>
+                                </div>
                             </DialogFooter>
                         </>
                     ) : (
@@ -706,20 +759,22 @@ function SupplierResponseStatus({ status }) {
     );
 }
 
+function getDefaultDeadline() {
+    const d = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function CreateRequestDialog({
     open,
     onOpenChange,
-    suppliers,
+    suppliers = [],
     onCreated,
 }) {
     const { toast } = useToast();
-    const [step, setStep] = useState(1); // Step 1: Details & Items, Step 2: Suppliers & Review
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [deadline, setDeadline] = useState(() => {
-        const d = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-        return d.toISOString().slice(0, 16);
-    });
+    const [deadline, setDeadline] = useState(getDefaultDeadline);
     const [paymentType, setPaymentType] = useState("cash");
     const [creditPeriod, setCreditPeriod] = useState(30);
     const [items, setItems] = useState([
@@ -729,45 +784,70 @@ function CreateRequestDialog({
     const [saving, setSaving] = useState(false);
     const [categories, setCategories] = useState([]);
     const [categoryFilter, setCategoryFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState("all"); // "all" or "verified"
     const [supplierSearch, setSupplierSearch] = useState("");
     const [supplierDropdownOpen, setSupplierDropdownOpen] = useState(false);
+    const [localSuppliers, setLocalSuppliers] = useState(suppliers || []);
+    const supplierDropdownRef = useRef(null);
+
+    useEffect(() => {
+        if (suppliers?.length) {
+            setLocalSuppliers(suppliers);
+        }
+    }, [suppliers]);
+
+    useEffect(() => {
+        if (!supplierDropdownOpen) return;
+        const handleOutsideClick = (e) => {
+            if (supplierDropdownRef.current && !supplierDropdownRef.current.contains(e.target)) {
+                setSupplierDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleOutsideClick);
+        return () => document.removeEventListener("mousedown", handleOutsideClick);
+    }, [supplierDropdownOpen]);
 
     useEffect(() => {
         if (open) {
             api("/api/categories").then((d) => setCategories(d.categories || [])).catch(() => {});
+            if (!suppliers || suppliers.length === 0) {
+                api("/api/suppliers")
+                    .then((d) => setLocalSuppliers(Array.isArray(d) ? d : (d.data || [])))
+                    .catch(() => {});
+            }
         }
-    }, [open]);
+    }, [open, suppliers]);
 
     const reset = () => {
-        setStep(1);
         setTitle("");
         setDescription("");
-        setDeadline(() => {
-            const d = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-            return d.toISOString().slice(0, 16);
-        });
+        setDeadline(getDefaultDeadline());
         setPaymentType("cash");
         setCreditPeriod(30);
         setItems([{ itemName: "", description: "", quantity: 1, unit: "pcs" }]);
         setSelectedSuppliers([]);
         setCategoryFilter("all");
+        setStatusFilter("all");
         setSupplierSearch("");
         setSupplierDropdownOpen(false);
     };
 
-    const verifiedSuppliers = suppliers
-        .filter((s) => s.verificationStatus === "verified")
-        .filter((s) => {
-            if (categoryFilter === "all") return true;
-            const tags = (s.categoryTags || "").split(",").map((t) => t.trim().toLowerCase());
-            return tags.includes(categoryFilter.toLowerCase());
-        });
+    const activeSuppliers = (localSuppliers || []).filter((s) => s.active !== false);
 
-    const filteredSuppliers = verifiedSuppliers.filter((s) => {
+    const filteredSuppliers = activeSuppliers.filter((s) => {
+        if (statusFilter === "verified" && s.verificationStatus !== "verified") {
+            return false;
+        }
+        if (categoryFilter !== "all") {
+            const tags = (s.categoryTags || "").split(",").map((t) => t.trim().toLowerCase());
+            if (!tags.includes(categoryFilter.toLowerCase())) {
+                return false;
+            }
+        }
         if (!supplierSearch.trim()) return true;
         const q = supplierSearch.toLowerCase();
         return (
-            s.legalName.toLowerCase().includes(q) ||
+            (s.legalName || "").toLowerCase().includes(q) ||
             (s.contactName || "").toLowerCase().includes(q) ||
             (s.tin || "").toLowerCase().includes(q) ||
             (s.categoryTags || "").toLowerCase().includes(q)
@@ -785,25 +865,15 @@ function CreateRequestDialog({
             prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
         );
 
-    const selectAllVerified = () => {
-        if (selectedSuppliers.length === verifiedSuppliers.length && verifiedSuppliers.length > 0) {
-            setSelectedSuppliers([]);
+    const selectAllFiltered = () => {
+        const filteredIds = filteredSuppliers.map((s) => s.id);
+        if (filteredIds.length === 0) return;
+        const allSelected = filteredIds.every((id) => selectedSuppliers.includes(id));
+        if (allSelected) {
+            setSelectedSuppliers(selectedSuppliers.filter((id) => !filteredIds.includes(id)));
         } else {
-            setSelectedSuppliers(verifiedSuppliers.map((s) => s.id));
+            setSelectedSuppliers(Array.from(new Set([...selectedSuppliers, ...filteredIds])));
         }
-    };
-
-    const handleNext = () => {
-        if (!title.trim()) {
-            toast({ title: "Title is required", variant: "destructive" });
-            return;
-        }
-        const validItems = items.filter((it) => it.itemName.trim());
-        if (validItems.length === 0) {
-            toast({ title: "Add at least one item", variant: "destructive" });
-            return;
-        }
-        setStep(2);
     };
 
     const save = async () => {
@@ -811,19 +881,19 @@ function CreateRequestDialog({
             toast({ title: "Title is required", variant: "destructive" });
             return;
         }
-        const validItems = items.filter((it) => it.itemName.trim());
+        const validItems = items.filter((it) => it.itemName?.trim());
         if (validItems.length === 0) {
             toast({ title: "Add at least one item", variant: "destructive" });
             return;
         }
         if (selectedSuppliers.length === 0) {
-            toast({ title: "Select at least one supplier", variant: "destructive" });
+            toast({ title: "Select at least one supplier to invite", variant: "destructive" });
             return;
         }
         if (selectedSuppliers.length < 3) {
             toast({
                 title: "3 quotes recommended",
-                description: "Governance policy recommends minimum 3 suppliers per RFQ. You can continue anyway.",
+                description: "Governance policy recommends minimum 3 suppliers per RFQ. Creating draft anyway.",
             });
         }
 
@@ -832,16 +902,16 @@ function CreateRequestDialog({
             const res = await api("/api/proforma-requests", {
                 method: "POST",
                 body: JSON.stringify({
-                    title: title.trim(),
-                    description: description.trim(),
+                    title: (title || "").trim(),
+                    description: (description || "").trim(),
                     deadline,
                     paymentType,
                     creditPeriod: paymentType === "credit" ? creditPeriod : null,
                     items: validItems.map((it) => ({
-                        itemName: it.itemName.trim(),
-                        description: it.description.trim(),
-                        quantity: Number(it.quantity),
-                        unit: it.unit.trim(),
+                        itemName: (it.itemName || "").trim(),
+                        description: (it.description || "").trim(),
+                        quantity: Number(it.quantity) || 1,
+                        unit: (it.unit || "pcs").trim(),
                     })),
                     supplierIds: selectedSuppliers,
                 }),
@@ -859,7 +929,7 @@ function CreateRequestDialog({
         }
     };
 
-    const validItemCount = items.filter((it) => it.itemName.trim()).length;
+    const validItemCount = items.filter((it) => it.itemName?.trim()).length;
 
     return (
         <Dialog
@@ -869,61 +939,61 @@ function CreateRequestDialog({
                 if (!v) reset();
             }}
         >
-            <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
-                <DialogHeader className="shrink-0">
-                    <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-                        <FileText className="h-5 w-5 text-brand-600 dark:text-gold-400" />
+            <DialogContent className="max-w-4xl w-[92vw] max-h-[90vh] flex flex-col p-6 sm:p-8 overflow-hidden">
+                <DialogHeader className="shrink-0 border-b pb-4">
+                    <DialogTitle className="flex items-center gap-2.5 text-xl font-bold">
+                        <FileText className="h-6 w-6 text-primary" />
                         Create Proforma Request (RFQ)
                     </DialogTitle>
-                    <DialogDescription className="text-xs text-muted-foreground">
-                        Define RFQ title, line items, and select verified suppliers to invite via Telegram.
+                    <DialogDescription className="text-xs text-muted-foreground mt-1">
+                        Define RFQ details, requested line items, and select suppliers to invite via Telegram.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-2">
+                <div className="flex-1 overflow-y-auto space-y-5 py-3 pr-1">
                     {/* RFQ General Info */}
-                    <div className="grid gap-3.5">
-                        <div>
-                            <Label className="text-xs font-medium mb-1 block">RFQ Title <span className="text-rose-500">*</span></Label>
+                    <div className="grid sm:grid-cols-2 gap-3.5">
+                        <div className="sm:col-span-2">
+                            <Label className="text-xs font-semibold mb-1 block">
+                                RFQ Title <span className="text-rose-500">*</span>
+                            </Label>
                             <Input
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                placeholder="e.g. Coffee Beans Supply — Q3 2026 Procurement"
+                                placeholder="e.g. Arabica Washed Coffee Beans — Q3 2026 Procurement"
+                                className="h-10 text-sm font-medium"
                             />
                         </div>
-                        <div className="grid sm:grid-cols-2 gap-3">
-                            <div>
-                                <Label className="text-xs font-medium mb-1 block">Response Deadline <span className="text-rose-500">*</span></Label>
-                                <Input
-                                    type="datetime-local"
-                                    value={deadline}
-                                    onChange={(e) => setDeadline(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-medium mb-1 block">Description / Notes (Optional)</Label>
-                                <Input
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Special instructions or specifications for suppliers…"
-                                />
-                            </div>
-                        </div>
+
                         <div>
-                            <Label className="text-xs font-medium mb-1.5 block">Payment Term <span className="text-rose-500">*</span></Label>
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="inline-flex rounded-lg border p-1 bg-muted/30">
+                            <Label className="text-xs font-semibold mb-1 block">
+                                Response Deadline <span className="text-rose-500">*</span>
+                            </Label>
+                            <Input
+                                type="datetime-local"
+                                value={deadline}
+                                onChange={(e) => setDeadline(e.target.value)}
+                                className="h-9.5 text-xs"
+                            />
+                        </div>
+
+                        <div>
+                            <Label className="text-xs font-semibold mb-1 block">
+                                Payment Terms <span className="text-rose-500">*</span>
+                            </Label>
+                            <div className="flex items-center gap-2 h-9.5">
+                                <div className="inline-flex rounded-lg border p-0.5 bg-muted/40">
                                     <button
                                         type="button"
                                         onClick={() => setPaymentType("cash")}
                                         className={cn(
-                                            "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                                            "px-3 py-1 text-xs font-medium rounded-md transition-all",
                                             paymentType === "cash"
-                                                ? "bg-background text-foreground shadow-sm font-semibold"
+                                                ? "bg-background text-foreground shadow-xs font-semibold"
                                                 : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
-                                        💵 Cash / ካሽ
+                                        💵 Cash
                                     </button>
                                     <button
                                         type="button"
@@ -932,48 +1002,58 @@ function CreateRequestDialog({
                                             if (!creditPeriod) setCreditPeriod(30);
                                         }}
                                         className={cn(
-                                            "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                                            "px-3 py-1 text-xs font-medium rounded-md transition-all",
                                             paymentType === "credit"
-                                                ? "bg-background text-foreground shadow-sm font-semibold"
+                                                ? "bg-background text-foreground shadow-xs font-semibold"
                                                 : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
-                                        💳 Credit / ብድር
+                                        💳 Credit
                                     </button>
                                 </div>
-
                                 {paymentType === "credit" && (
-                                    <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
-                                        <span className="text-xs text-muted-foreground font-medium mr-1">Period:</span>
+                                    <div className="flex items-center gap-1">
                                         {[30, 60, 90].map((days) => (
                                             <button
                                                 key={days}
                                                 type="button"
                                                 onClick={() => setCreditPeriod(days)}
                                                 className={cn(
-                                                    "px-2.5 py-1 text-xs rounded-md border font-medium transition-colors",
+                                                    "px-2 py-0.5 text-xs rounded border transition-colors",
                                                     creditPeriod === days
-                                                        ? "bg-brand-600 text-white border-brand-600 dark:bg-gold-500 dark:text-zinc-950 dark:border-gold-500"
+                                                        ? "bg-primary text-primary-foreground border-primary font-semibold"
                                                         : "bg-card text-foreground hover:bg-accent border-border"
                                                 )}
                                             >
-                                                {days} Days
+                                                {days}d
                                             </button>
                                         ))}
                                     </div>
                                 )}
                             </div>
                         </div>
+
+                        <div className="sm:col-span-2">
+                            <Label className="text-xs font-medium mb-1 block text-muted-foreground">
+                                Special Instructions / Specifications (Optional)
+                            </Label>
+                            <Input
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Delivery location, special quality grades, packaging requirements…"
+                                className="h-9 text-xs"
+                            />
+                        </div>
                     </div>
 
                     {/* Line Items Section */}
-                    <div className="space-y-2.5 pt-2 border-t">
+                    <div className="space-y-3 pt-3 border-t">
                         <div className="flex items-center justify-between">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-brand-700 dark:text-gold-400 flex items-center gap-1.5">
-                                <Package className="h-4 w-4" />
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <Package className="h-4 w-4 text-primary" />
                                 Requested Line Items ({items.length})
                             </Label>
-                            <Button size="sm" variant="outline" onClick={addItem} className="h-7 text-xs">
+                            <Button size="sm" variant="outline" onClick={addItem} className="h-7 text-xs font-medium">
                                 <Plus className="h-3.5 w-3.5 mr-1" />
                                 Add Item
                             </Button>
@@ -981,132 +1061,272 @@ function CreateRequestDialog({
 
                         <div className="space-y-2">
                             {items.map((it, i) => (
-                                <Card key={i} className="p-3 border bg-card">
-                                    <div className="flex items-start gap-2">
-                                        <div className="grid place-items-center h-5 w-5 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-800 dark:text-brand-200 text-[11px] font-bold shrink-0 mt-2">
-                                            {i + 1}
-                                        </div>
-                                        <div className="flex-1 space-y-1.5">
-                                            <div className="grid gap-2 sm:grid-cols-[2.5fr_1fr_1fr]">
-                                                <Input
-                                                    placeholder="Item Name / Product *"
-                                                    value={it.itemName}
-                                                    onChange={(e) => updateItem(i, "itemName", e.target.value)}
-                                                    className="font-medium h-9"
-                                                />
-                                                <Input
-                                                    type="number"
-                                                    min="0"
-                                                    step="any"
-                                                    placeholder="Quantity"
-                                                    value={it.quantity}
-                                                    onChange={(e) => updateItem(i, "quantity", e.target.value)}
-                                                    className="h-9"
-                                                />
-                                                <Input
-                                                    placeholder="Unit (kg, pcs, L)"
-                                                    value={it.unit}
-                                                    onChange={(e) => updateItem(i, "unit", e.target.value)}
-                                                    className="h-9"
-                                                />
-                                            </div>
-                                            <Input
-                                                placeholder="Detailed specification / packaging requirement (optional)"
-                                                value={it.description}
-                                                onChange={(e) => updateItem(i, "description", e.target.value)}
-                                                className="text-xs h-8"
-                                            />
-                                        </div>
-                                        {items.length > 1 && (
-                                            <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="h-8 w-8 text-rose-600 hover:text-rose-700 shrink-0 mt-1"
-                                                onClick={() => removeItem(i)}
-                                                title="Remove line item"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        )}
+                                <div key={i} className="flex items-center gap-2 p-2 rounded-lg border bg-muted/20">
+                                    <div className="grid place-items-center h-6 w-6 rounded-full bg-primary/10 text-primary text-[11px] font-bold shrink-0">
+                                        {i + 1}
                                     </div>
-                                </Card>
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[3fr_1.2fr_1.2fr] gap-2">
+                                        <Input
+                                            placeholder="Item / Product Name *"
+                                            value={it.itemName}
+                                            onChange={(e) => updateItem(i, "itemName", e.target.value)}
+                                            className="font-medium h-9 text-xs"
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    addItem();
+                                                }
+                                            }}
+                                        />
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            step="any"
+                                            placeholder="Quantity"
+                                            value={it.quantity}
+                                            onChange={(e) => updateItem(i, "quantity", e.target.value)}
+                                            className="h-9 text-xs"
+                                        />
+                                        <Input
+                                            placeholder="Unit (kg, pcs, L)"
+                                            value={it.unit}
+                                            onChange={(e) => updateItem(i, "unit", e.target.value)}
+                                            className="h-9 text-xs"
+                                        />
+                                    </div>
+                                    {items.length > 1 && (
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/50 shrink-0 rounded-md"
+                                            onClick={() => removeItem(i)}
+                                            title="Remove line item"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    )}
+                                </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Target Suppliers Section (Searchable Dropdown Combobox) */}
-                    <div className="space-y-2.5 pt-2 border-t">
+                    {/* Target Suppliers Section (Multi-Select Dropdown) */}
+                    <div className="space-y-3 pt-3 border-t">
                         <div className="flex items-center justify-between flex-wrap gap-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-brand-700 dark:text-gold-400 flex items-center gap-1.5">
-                                <Building2 className="h-4 w-4" />
-                                Select Suppliers to Invite <span className="text-rose-500">*</span> ({selectedSuppliers.length} selected)
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <Building2 className="h-4 w-4 text-primary" />
+                                Select Suppliers to Invite <span className="text-rose-500">*</span>
                             </Label>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={selectAllVerified}
-                                className="h-7 text-xs"
-                            >
-                                {selectedSuppliers.length === verifiedSuppliers.length && verifiedSuppliers.length > 0
-                                    ? "Deselect All"
-                                    : "Select All Verified"}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                {selectedSuppliers.length >= 3 ? (
+                                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium inline-flex items-center gap-1">
+                                        <CheckCircle2 className="h-3.5 w-3.5" /> 3+ Quotes Policy Met
+                                    </span>
+                                ) : (
+                                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                        {selectedSuppliers.length}/3 Quotes recommended
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Category Filter Chips */}
-                        {categories.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 py-0.5">
-                                <button
-                                    type="button"
-                                    onClick={() => setCategoryFilter("all")}
-                                    className={cn(
-                                        "px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all border",
-                                        categoryFilter === "all"
-                                            ? "bg-brand-600 text-white border-brand-600 shadow-sm dark:bg-gold-500 dark:text-slate-950"
-                                            : "bg-card text-muted-foreground border-border hover:border-brand-300"
+                        {/* Multi-Select Dropdown Combobox */}
+                        <div ref={supplierDropdownRef}>
+                            <button
+                                type="button"
+                                onClick={() => setSupplierDropdownOpen(!supplierDropdownOpen)}
+                                className={cn(
+                                    "w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg border bg-background text-sm transition-all text-left",
+                                    supplierDropdownOpen ? "ring-2 ring-primary border-primary" : "hover:border-border/80"
+                                )}
+                            >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    {selectedSuppliers.length === 0 ? (
+                                        <span className="text-muted-foreground text-xs sm:text-sm">Click to choose suppliers to invite…</span>
+                                    ) : (
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span className="font-semibold text-foreground text-xs sm:text-sm">
+                                                {selectedSuppliers.length} supplier{selectedSuppliers.length > 1 ? "s" : ""} selected
+                                            </span>
+                                            <Badge variant="secondary" className="text-[11px] font-normal">
+                                                {selectedSuppliers.filter((id) => (localSuppliers || []).find((s) => s.id === id)?.telegramChatId).length} via Telegram
+                                            </Badge>
+                                        </div>
                                     )}
-                                >
-                                    All Categories
-                                </button>
-                                {categories.map((c) => {
-                                    const isSelected = categoryFilter === c.name;
-                                    return (
-                                        <button
-                                            key={c.id}
-                                            type="button"
-                                            onClick={() => setCategoryFilter(c.name)}
-                                            className={cn(
-                                                "px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all border",
-                                                isSelected
-                                                    ? "bg-brand-600 text-white border-brand-600 shadow-sm dark:bg-gold-500 dark:text-slate-950"
-                                                    : "bg-card text-muted-foreground border-border hover:border-brand-300"
-                                            )}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0 ml-2">
+                                    {selectedSuppliers.length > 0 && (
+                                        <span
+                                            onClick={(e) => { e.stopPropagation(); setSelectedSuppliers([]); }}
+                                            className="text-xs text-muted-foreground hover:text-rose-600 px-1.5 py-0.5 rounded cursor-pointer"
                                         >
-                                            {c.name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                            Clear all
+                                        </span>
+                                    )}
+                                    <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", supplierDropdownOpen && "rotate-180")} />
+                                </div>
+                            </button>
 
-                        {/* Selected Supplier Badges */}
-                        {selectedSuppliers.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 border rounded-lg max-h-24 overflow-y-auto">
+                            {/* Dropdown Content - Rendered inline so it never clips! */}
+                            {supplierDropdownOpen && (
+                                <div className="mt-2 border border-border rounded-xl bg-card shadow-sm overflow-hidden animate-procurement-scale-in">
+                                    {/* Search & Actions Header */}
+                                    <div className="p-3 border-b bg-muted/20 space-y-2.5">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                            <Input
+                                                placeholder="Search suppliers by legal name, category, or TIN…"
+                                                value={supplierSearch}
+                                                onChange={(e) => setSupplierSearch(e.target.value)}
+                                                className="pl-8.5 h-8.5 text-xs"
+                                                autoFocus
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+                                            {/* Status Filter + Category Filter Chips */}
+                                            <div className="flex flex-wrap items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setStatusFilter(statusFilter === "all" ? "verified" : "all")}
+                                                    className={cn(
+                                                        "px-2 py-0.5 rounded text-[11px] font-medium transition-colors border",
+                                                        statusFilter === "verified"
+                                                            ? "bg-emerald-600 text-white border-emerald-600"
+                                                            : "bg-background text-muted-foreground border-border hover:bg-accent"
+                                                    )}
+                                                >
+                                                    {statusFilter === "verified" ? "✓ Verified Only" : "All Statuses"}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCategoryFilter("all")}
+                                                    className={cn(
+                                                        "px-2 py-0.5 rounded text-[11px] font-medium transition-colors border",
+                                                        categoryFilter === "all"
+                                                            ? "bg-primary text-primary-foreground border-primary"
+                                                            : "bg-background text-muted-foreground border-border hover:bg-accent"
+                                                    )}
+                                                >
+                                                    All Categories
+                                                </button>
+                                                {categories.slice(0, 6).map((c) => (
+                                                    <button
+                                                        key={c.id}
+                                                        type="button"
+                                                        onClick={() => setCategoryFilter(c.name)}
+                                                        className={cn(
+                                                            "px-2 py-0.5 rounded text-[11px] font-medium transition-colors border",
+                                                            categoryFilter === c.name
+                                                                ? "bg-primary text-primary-foreground border-primary"
+                                                                : "bg-background text-muted-foreground border-border hover:bg-accent"
+                                                        )}
+                                                    >
+                                                        {c.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={selectAllFiltered}
+                                                className="h-6 text-[11px] px-2 text-primary font-medium"
+                                            >
+                                                {filteredSuppliers.length > 0 && filteredSuppliers.every((s) => selectedSuppliers.includes(s.id))
+                                                    ? "Deselect All"
+                                                    : `Select All (${filteredSuppliers.length})`}
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* Suppliers Options List - 2 Columns on wide screen */}
+                                    <div className="max-h-56 overflow-y-auto p-2">
+                                        {filteredSuppliers.length === 0 ? (
+                                            <div className="p-6 text-center text-xs text-muted-foreground">
+                                                No suppliers found matching your search or filters.
+                                            </div>
+                                        ) : (
+                                            <div className="grid sm:grid-cols-2 gap-1.5">
+                                                {filteredSuppliers.map((s) => {
+                                                    const checked = selectedSuppliers.includes(s.id);
+                                                    return (
+                                                        <div
+                                                            key={s.id}
+                                                            onClick={() => toggleSupplier(s.id)}
+                                                            className={cn(
+                                                                "flex items-center gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition-colors",
+                                                                checked
+                                                                    ? "bg-primary/10 border-primary/40 font-medium"
+                                                                    : "bg-background border-border hover:bg-accent/50"
+                                                            )}
+                                                        >
+                                                            <Checkbox
+                                                                checked={checked}
+                                                                onCheckedChange={() => toggleSupplier(s.id)}
+                                                            />
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="font-semibold text-foreground text-xs truncate">
+                                                                    {s.legalName}
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5 truncate">
+                                                                    {s.verificationStatus === "verified" ? (
+                                                                        <span className="text-emerald-600 font-medium">✓ Verified</span>
+                                                                    ) : (
+                                                                        <span className="text-amber-600">Unverified</span>
+                                                                    )}
+                                                                    {s.telegramChatId ? (
+                                                                        <span className="text-sky-600 font-medium">· Telegram</span>
+                                                                    ) : (
+                                                                        <span>· Manual</span>
+                                                                    )}
+                                                                    {s.categoryTags && <span>· {s.categoryTags}</span>}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="p-2 border-t bg-muted/20 flex justify-end">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={() => setSupplierDropdownOpen(false)}
+                                            className="h-7 text-xs px-3"
+                                        >
+                                            Done ({selectedSuppliers.length} selected)
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Selected Supplier Pills */}
+                        {selectedSuppliers.length > 0 && !supplierDropdownOpen && (
+                            <div className="flex flex-wrap gap-1.5 p-2 bg-muted/20 border rounded-lg max-h-24 overflow-y-auto">
                                 {selectedSuppliers.map((id) => {
-                                    const s = suppliers.find((sup) => sup.id === id);
+                                    const s = (localSuppliers || []).find((sup) => sup.id === id);
                                     if (!s) return null;
                                     return (
                                         <Badge
                                             key={id}
                                             variant="secondary"
-                                            className="px-2 py-1 text-xs bg-brand-50 text-brand-800 dark:bg-gold-950 dark:text-gold-300 border border-brand-200 dark:border-gold-800 flex items-center gap-1.5"
+                                            className="px-2 py-0.5 text-[11px] flex items-center gap-1 font-medium"
                                         >
-                                            <Building2 className="h-3 w-3 opacity-70" />
-                                            <span className="font-semibold">{s.legalName}</span>
+                                            <Building2 className="h-3 w-3 opacity-60" />
+                                            <span>{s.legalName}</span>
+                                            {s.telegramChatId ? (
+                                                <span className="h-1.5 w-1.5 rounded-full bg-sky-500" title="Connected to Telegram" />
+                                            ) : null}
                                             <button
                                                 type="button"
                                                 onClick={() => toggleSupplier(id)}
-                                                className="hover:text-rose-600 rounded-full"
+                                                className="hover:text-rose-600 rounded-full transition-colors ml-0.5"
                                                 title="Remove supplier"
                                             >
                                                 <X className="h-3 w-3" />
@@ -1116,92 +1336,19 @@ function CreateRequestDialog({
                                 })}
                             </div>
                         )}
-
-                        {/* Searchable Combobox Dropdown Input */}
-                        <div className="relative">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                                <Input
-                                    placeholder="Search & select verified suppliers by name, TIN, or category..."
-                                    value={supplierSearch}
-                                    onChange={(e) => {
-                                        setSupplierSearch(e.target.value);
-                                        setSupplierDropdownOpen(true);
-                                    }}
-                                    onFocus={() => setSupplierDropdownOpen(true)}
-                                    className="pl-9 pr-9 h-10 text-xs font-medium"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setSupplierDropdownOpen(!supplierDropdownOpen)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                >
-                                    <ChevronDown className="h-4 w-4" />
-                                </button>
-                            </div>
-
-                            {/* Dropdown Options List */}
-                            {supplierDropdownOpen && (
-                                <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-card border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-border">
-                                    {filteredSuppliers.length === 0 ? (
-                                        <div className="p-4 text-xs text-muted-foreground text-center">
-                                            No verified suppliers match your search.
-                                        </div>
-                                    ) : (
-                                        filteredSuppliers.map((s) => {
-                                            const checked = selectedSuppliers.includes(s.id);
-                                            return (
-                                                <button
-                                                    key={s.id}
-                                                    type="button"
-                                                    onClick={() => toggleSupplier(s.id)}
-                                                    className={cn(
-                                                        "w-full text-left p-2.5 text-xs flex items-center justify-between transition-colors",
-                                                        checked
-                                                            ? "bg-brand-50/80 font-medium text-brand-900 dark:bg-gold-950/60 dark:text-gold-300"
-                                                            : "hover:bg-accent/50 text-foreground"
-                                                    )}
-                                                >
-                                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                                        <Checkbox
-                                                            checked={checked}
-                                                            onCheckedChange={() => toggleSupplier(s.id)}
-                                                        />
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="font-semibold truncate">{s.legalName}</div>
-                                                            <div className="text-[11px] text-muted-foreground truncate">
-                                                                {s.contactName ? `Contact: ${s.contactName}` : "No contact name"} · TIN: {s.tin || "N/A"}
-                                                                {s.categoryTags && ` · ${s.categoryTags}`}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="shrink-0 pl-2">
-                                                        {s.telegramChatId ? (
-                                                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950 dark:text-cyan-300">
-                                                                Telegram
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground">
-                                                                Manual
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </button>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                            )}
-                        </div>
                     </div>
                 </div>
 
-                <DialogFooter className="pt-3 border-t shrink-0">
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                <DialogFooter className="pt-3 border-t shrink-0 flex items-center justify-between gap-3">
+                    <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 px-4 text-xs">
                         Cancel
                     </Button>
-                    <Button onClick={save} disabled={saving} className="bg-brand-600 hover:bg-brand-700 dark:bg-gold-500 dark:hover:bg-gold-600 dark:text-slate-950 font-medium">
-                        {saving && <Spinner className="h-4 w-4 mr-1.5" />}
+                    <Button
+                        onClick={save}
+                        disabled={saving}
+                        className="h-9 px-5 text-xs font-semibold"
+                    >
+                        {saving && <Spinner className="h-3.5 w-3.5 mr-2" />}
                         Create Proforma Request ({selectedSuppliers.length} Suppliers)
                     </Button>
                 </DialogFooter>

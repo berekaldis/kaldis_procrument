@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, lazy, Suspense } from "react";
+import { useEffect, useState, useCallback, useMemo, lazy, Suspense, Component } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     LayoutDashboard, Building2, FileText, Inbox, Bell, History, Send,
@@ -20,15 +20,51 @@ import { ProfileDialog } from "../Components/ProfileDialog";
 import { Toaster } from "../Components/Toaster";
 import { Spinner } from "../Components/ui/spinner.jsx";
 
-const DashboardView = lazy(() => import("../Components/DashboardView").then((m) => ({ default: m.DashboardView })));
-const SuppliersView = lazy(() => import("../Components/SuppliersView").then((m) => ({ default: m.SuppliersView })));
-const RequestsView = lazy(() => import("../Components/RequestsView").then((m) => ({ default: m.RequestsView })));
-const ProformasView = lazy(() => import("../Components/ProformasView").then((m) => ({ default: m.ProformasView })));
-const NotificationsView = lazy(() => import("../Components/NotificationsView").then((m) => ({ default: m.NotificationsView })));
-const AuditView = lazy(() => import("../Components/AuditView").then((m) => ({ default: m.AuditView })));
-const OutboxView = lazy(() => import("../Components/OutboxView").then((m) => ({ default: m.OutboxView })));
-const SettingsView = lazy(() => import("../Components/SettingsView").then((m) => ({ default: m.SettingsView })));
-const UsersView = lazy(() => import("../Components/UsersView").then((m) => ({ default: m.UsersView })));
+const DashboardView = lazy(() => import("../Components/DashboardView").then((m) => ({ default: m.DashboardView || m.default })));
+const SuppliersView = lazy(() => import("../Components/SuppliersView").then((m) => ({ default: m.SuppliersView || m.default })));
+const RequestsView = lazy(() => import("../Components/RequestsView").then((m) => ({ default: m.RequestsView || m.default })));
+const ProformasView = lazy(() => import("../Components/ProformasView").then((m) => ({ default: m.ProformasView || m.default })));
+const NotificationsView = lazy(() => import("../Components/NotificationsView").then((m) => ({ default: m.NotificationsView || m.default })));
+const AuditView = lazy(() => import("../Components/AuditView").then((m) => ({ default: m.AuditView || m.default })));
+const OutboxView = lazy(() => import("../Components/OutboxView").then((m) => ({ default: m.OutboxView || m.default })));
+const SettingsView = lazy(() => import("../Components/SettingsView").then((m) => ({ default: m.SettingsView || m.default })));
+const UsersView = lazy(() => import("../Components/UsersView").then((m) => ({ default: m.UsersView || m.default })));
+
+class ViewErrorBoundary extends Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+    componentDidCatch(error, errorInfo) {
+        console.error("View error:", error, errorInfo);
+    }
+    componentDidUpdate(prevProps) {
+        if (prevProps.section !== this.props.section && this.state.hasError) {
+            this.setState({ hasError: false, error: null });
+        }
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="p-8 text-center space-y-3">
+                    <p className="text-sm font-semibold text-rose-600">Failed to load view</p>
+                    <p className="text-xs text-muted-foreground">{this.state.error?.message}</p>
+                    <button
+                        type="button"
+                        onClick={() => this.setState({ hasError: false, error: null })}
+                        className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md shadow-xs"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
 
 function ViewFallback() {
     return (
@@ -208,17 +244,17 @@ export default function App({ auth: initialAuth }) {
     const roleLabel = t(`role.${user.role}`, user.role);
 
     return (
-        <div className="min-h-screen flex bg-background">
+        <div className="min-h-screen flex bg-background text-foreground">
             <aside className={cn(
-                "fixed lg:sticky top-0 z-40 h-screen shrink-0 bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 w-72",
+                "fixed lg:sticky top-0 z-40 h-screen shrink-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col transition-all duration-300 w-72",
                 collapsed ? "lg:w-20" : "lg:w-72",
                 mobileNavOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>
                 <div className={cn("flex items-center gap-3 px-5 h-16 border-b border-sidebar-border", collapsed && "lg:px-0 lg:justify-center")}>
-                    <KaldiLogo className="h-9 w-9 shadow-lg shadow-brand-950/40" />
+                    <KaldiLogo className="h-9 w-9 shadow-sm ring-1 ring-border" />
                     <div className={cn("min-w-0", collapsed && "lg:hidden")}>
-                        <div className="font-display font-semibold text-sm leading-tight truncate text-sidebar-foreground">Kaldi&apos;s Coffee</div>
-                        <div className="text-[11px] text-sidebar-foreground/50">{t("app.tagline")}</div>
+                        <div className="font-semibold text-sm leading-tight truncate text-sidebar-foreground">Kaldis Coffee</div>
+                        <div className="text-[11px] text-muted-foreground">{t("app.tagline")}</div>
                     </div>
                     <button onClick={() => setMobileNavOpen(false)} className={cn("ml-auto lg:hidden text-sidebar-foreground p-1", collapsed && "lg:hidden")}>
                         <X className="h-5 w-5" />
@@ -226,7 +262,7 @@ export default function App({ auth: initialAuth }) {
                 </div>
                 <button
                     onClick={toggleCollapsed}
-                    className="hidden lg:flex items-center justify-center h-7 w-7 rounded-full bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-accent-foreground border border-sidebar-border absolute -right-3 top-14 z-10 shadow-md transition-colors"
+                    className="hidden lg:flex items-center justify-center h-7 w-7 rounded-full bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-accent-foreground border border-sidebar-border absolute -right-3 top-14 z-10 shadow-xs transition-colors"
                     title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                     {collapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
@@ -234,7 +270,7 @@ export default function App({ auth: initialAuth }) {
                 <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-5 procurement-nav-scroll">
                     {Object.entries(grouped).map(([group, items]) => (
                         <div key={group}>
-                            <div className={cn("px-3 mb-2 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/35", collapsed && "lg:hidden")}>{t(group)}</div>
+                            <div className={cn("px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70", collapsed && "lg:hidden")}>{t(group)}</div>
                             <div className="space-y-0.5">
                                 {items.map((item) => {
                                     const Icon = item.icon;
@@ -246,24 +282,24 @@ export default function App({ auth: initialAuth }) {
                                             className={cn(
                                                 "relative w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
                                                 collapsed && "lg:justify-center lg:px-0",
-                                                active ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                                active ? "text-sidebar-accent-foreground font-semibold" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                                             )}>
                                             {active && (
                                                 <motion.span
                                                     layoutId="nav-active-pill"
-                                                    className="absolute inset-0 rounded-lg bg-sidebar-primary shadow-sm shadow-brand-950/30"
+                                                    className="absolute inset-0 rounded-lg bg-sidebar-accent shadow-xs border border-sidebar-border/60"
                                                     transition={{ type: "spring", stiffness: 500, damping: 35 }}
                                                 />
                                             )}
                                             <span className="relative shrink-0">
-                                                <Icon className="h-4 w-4" />
+                                                <Icon className={cn("h-4 w-4", active ? "text-sidebar-primary" : "text-sidebar-foreground/70")} />
                                                 {showDot && (
-                                                    <span className={cn("hidden absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500", collapsed && "lg:block")} />
+                                                    <span className={cn("hidden absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive", collapsed && "lg:block")} />
                                                 )}
                                             </span>
                                             <span className={cn("relative flex-1 truncate", collapsed && "lg:hidden")}>{t(item.label)}</span>
                                             {showDot && (
-                                                <span className={cn("relative grid place-items-center min-w-5 h-5 px-1.5 text-[10px] font-semibold rounded-full bg-rose-500 text-white", collapsed && "lg:hidden")}>
+                                                <span className={cn("relative grid place-items-center min-w-5 h-5 px-1.5 text-[10px] font-semibold rounded-full bg-destructive text-destructive-foreground", collapsed && "lg:hidden")}>
                                                     {unreadCount > 99 ? "99+" : unreadCount}
                                                 </span>
                                             )}
@@ -277,31 +313,31 @@ export default function App({ auth: initialAuth }) {
                 <div className="border-t border-sidebar-border px-3 py-3">
                     <div className="relative">
                         <button onClick={() => setShowUserMenu(v => !v)} className={cn("w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors text-left", collapsed && "lg:justify-center lg:px-0")}>
-                            <div className="grid place-items-center h-9 w-9 rounded-full bg-gradient-to-br from-brand-400 to-gold-500 text-white text-xs font-medium shrink-0">{initials(user.name)}</div>
+                            <div className="grid place-items-center h-8 w-8 rounded-full bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold shrink-0">{initials(user.name)}</div>
                             <div className={cn("min-w-0 flex-1", collapsed && "lg:hidden")}>
                                 <div className="text-sm font-medium truncate text-sidebar-foreground">{user.name}</div>
-                                <div className="text-[11px] text-sidebar-foreground/50 truncate">{roleLabel}</div>
+                                <div className="text-[11px] text-muted-foreground truncate">{roleLabel}</div>
                             </div>
                             <ChevronDown className={cn("h-4 w-4 text-sidebar-foreground/40 shrink-0", collapsed && "lg:hidden")} />
                         </button>
                         {showUserMenu && (
                             <>
                                 <div className="fixed inset-0 z-30" onClick={() => setShowUserMenu(false)} />
-                                <div className={cn("absolute bottom-full mb-2 bg-popover border border-border rounded-xl shadow-xl shadow-slate-950/10 z-40 overflow-hidden animate-procurement-scale-in", collapsed ? "lg:left-0 lg:w-64" : "left-0 right-0")}>
+                                <div className={cn("absolute bottom-full mb-2 bg-popover border border-border rounded-xl shadow-xl z-40 overflow-hidden animate-procurement-scale-in", collapsed ? "lg:left-0 lg:w-64" : "left-0 right-0")}>
                                     <div className="px-4 py-3 border-b border-border">
                                         <div className="text-sm font-medium truncate text-foreground">{user.name}</div>
                                         <div className="text-xs text-muted-foreground truncate">{user.email}</div>
-                                        <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 text-[10px] font-medium">
+                                        <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-[10px] font-medium border border-border">
                                             <ShieldCheck className="h-3 w-3" />{roleLabel}
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => { setProfileOpen(true); setShowUserMenu(false); }}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left hover:bg-accent transition-colors"
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left hover:bg-accent hover:text-accent-foreground transition-colors"
                                     >
                                         <UserCircle className="h-4 w-4" />{t("app.myProfile")}
                                     </button>
-                                    <button onClick={handleLogout} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left hover:bg-accent transition-colors text-rose-600">
+                                    <button onClick={handleLogout} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left hover:bg-accent transition-colors text-destructive">
                                         <LogOut className="h-4 w-4" />{t("app.signOut")}
                                     </button>
                                 </div>
@@ -311,22 +347,28 @@ export default function App({ auth: initialAuth }) {
                 </div>
             </aside>
 
-            {mobileNavOpen && <div className="fixed inset-0 z-30 bg-slate-950/50 lg:hidden" onClick={() => setMobileNavOpen(false)} />}
+            {mobileNavOpen && <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setMobileNavOpen(false)} />}
 
             <div className="flex-1 flex flex-col min-w-0">
                 <header className="sticky top-0 z-20 h-16 border-b border-border bg-background/80 backdrop-blur flex items-center gap-3 px-4 lg:px-6">
                     <button onClick={() => setMobileNavOpen(true)} className="lg:hidden p-2 text-foreground"><Menu className="h-5 w-5" /></button>
-                    <div className="min-w-0 flex-1">
-                        <h1 className="text-base lg:text-lg font-semibold leading-tight truncate text-foreground">{currentTitle.title}</h1>
-                        <p className="text-xs text-muted-foreground truncate hidden sm:block">{currentTitle.sub}</p>
+                    <div className="min-w-0 flex-1 flex items-center gap-2">
+                        <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground font-medium truncate">
+                            <button onClick={() => goTo("dashboard")} className="hover:text-foreground transition-colors">Kaldis Coffee</button>
+                            <span>/</span>
+                            <span className="hover:text-foreground transition-colors cursor-default">Procurement</span>
+                            <span>/</span>
+                            <span className="text-foreground font-semibold">{currentTitle.title}</span>
+                        </div>
+                        <h1 className="text-base font-semibold leading-tight truncate text-foreground sm:hidden">{currentTitle.title}</h1>
                     </div>
                     <GlobalSearch onNavigate={goTo} />
-                    <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-100 text-xs font-medium dark:bg-accent dark:text-accent-foreground dark:border-border">
+                    <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground border border-border text-xs font-medium">
                         <ShieldCheck className="h-3.5 w-3.5" />{roleLabel}
                     </div>
                     <button
                         onClick={toggleLang}
-                        className="px-2.5 h-9 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors inline-flex items-center gap-1"
+                        className="px-2.5 h-9 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors inline-flex items-center gap-1 border border-border/50"
                         title={lang === "am" ? "Switch to English" : "የአማርኛ ቋንቋ ይቀይሩ"}
                     >
                         <Languages className="h-4 w-4" />
@@ -334,23 +376,23 @@ export default function App({ auth: initialAuth }) {
                     </button>
                     <button
                         onClick={toggleTheme}
-                        className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                        className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors border border-border/50"
                         title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                     >
                         {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                     </button>
                     <div className="relative">
-                        <button onClick={() => setShowNotifPanel(v => !v)} className="relative p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+                        <button onClick={() => setShowNotifPanel(v => !v)} className="relative p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors border border-border/50">
                             <Bell className="h-5 w-5" />
-                            {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 grid place-items-center min-w-4 h-4 px-1 text-[9px] font-semibold rounded-full bg-rose-500 text-white">{unreadCount > 9 ? "9+" : unreadCount}</span>}
+                            {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 grid place-items-center min-w-4 h-4 px-1 text-[9px] font-semibold rounded-full bg-destructive text-destructive-foreground">{unreadCount > 9 ? "9+" : unreadCount}</span>}
                         </button>
                         {showNotifPanel && (
                             <>
                                 <div className="fixed inset-0 z-30" onClick={() => setShowNotifPanel(false)} />
-                                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-popover border border-border rounded-xl shadow-xl shadow-slate-950/10 z-40 overflow-hidden animate-procurement-scale-in">
+                                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-popover border border-border rounded-xl shadow-xl z-40 overflow-hidden animate-procurement-scale-in">
                                     <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                                         <div className="font-semibold text-sm text-foreground">{t("app.notifications")}</div>
-                                        <button onClick={markAllRead} disabled={unreadCount === 0} className="text-xs text-brand-600 hover:text-brand-700 disabled:opacity-50">{t("app.markAllRead")}</button>
+                                        <button onClick={markAllRead} disabled={unreadCount === 0} className="text-xs text-primary hover:underline disabled:opacity-50">{t("app.markAllRead")}</button>
                                     </div>
                                     <div className="max-h-96 overflow-y-auto">
                                         {notifications.length === 0 ? (
@@ -363,7 +405,7 @@ export default function App({ auth: initialAuth }) {
                                                     <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{n.message}</div>
                                                     <div className="text-[10px] text-muted-foreground/70 mt-1">{new Date(n.createdAt).toLocaleString()}</div>
                                                 </div>
-                                                {!n.read && <span className="h-2 w-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />}
+                                                {!n.read && <span className="h-2 w-2 rounded-full bg-destructive mt-1.5 shrink-0" />}
                                             </button>
                                         ))}
                                     </div>
@@ -381,26 +423,37 @@ export default function App({ auth: initialAuth }) {
                             exit={{ opacity: 0, y: -8 }}
                             transition={{ duration: 0.18, ease: "easeOut" }}
                         >
-                            <Suspense fallback={<ViewFallback />}>
-                                {section === "dashboard" && <DashboardView onNavigate={goTo} currentUser={user} />}
-                                {section === "suppliers" && <SuppliersView />}
-                                {section === "requests" && <RequestsView onNavigate={goTo} />}
-                                {section === "proformas" && <ProformasView />}
-                                {section === "notifications" && <NotificationsView onChange={loadNotifications} />}
-                                {section === "audit" && <AuditView />}
-                                {section === "outbox" && <OutboxView />}
-                                {section === "users" && <UsersView currentUser={user} />}
-                                {section === "settings" && <SettingsView />}
-                            </Suspense>
+                            <ViewErrorBoundary section={section}>
+                                <Suspense fallback={<ViewFallback />}>
+                                    {section === "dashboard" && <DashboardView onNavigate={goTo} currentUser={user} />}
+                                    {section === "suppliers" && <SuppliersView />}
+                                    {section === "requests" && <RequestsView onNavigate={goTo} />}
+                                    {section === "proformas" && <ProformasView />}
+                                    {section === "notifications" && <NotificationsView onChange={loadNotifications} />}
+                                    {section === "audit" && <AuditView />}
+                                    {section === "outbox" && <OutboxView />}
+                                    {section === "users" && <UsersView currentUser={user} />}
+                                    {section === "settings" && <SettingsView />}
+                                </Suspense>
+                            </ViewErrorBoundary>
                         </motion.div>
                     </AnimatePresence>
                 </main>
-                <footer className="mt-auto border-t border-border px-4 lg:px-6 py-4 text-xs text-muted-foreground flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-                    <div className="leading-relaxed">
-                        <div>{t("app.footer.copyright")}</div>
-                        <div className="text-muted-foreground/70">{t("app.footer.developedBy")}</div>
+                <footer className="mt-auto border-t border-border bg-background px-4 lg:px-6 py-4 text-xs text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <div className="flex items-center gap-1">
+                        <span>© {new Date().getFullYear()} Kaldis Coffee. All rights reserved.</span>
                     </div>
-                    <div className="flex items-center gap-2"><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />{t("app.signedInAs")} {user.name}</span></div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                            <span>Developed by</span>
+                            <span className="font-semibold text-foreground">BI Department</span>
+                        </div>
+                        <span className="text-border">|</span>
+                        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                            {user.name}
+                        </span>
+                    </div>
                 </footer>
             </div>
             <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} user={user} onUpdated={(u) => setUser({ ...user, ...u })} />

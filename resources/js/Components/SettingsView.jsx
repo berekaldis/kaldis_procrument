@@ -22,6 +22,13 @@ import {
     Plus,
     Pencil,
     X,
+    Search,
+    BarChart3,
+    Inbox,
+    Users,
+    FileText,
+    CheckSquare,
+    Square,
 } from "lucide-react";
 import { Spinner } from "./ui/spinner.jsx";
 import { Card } from "./ui/card.jsx";
@@ -765,10 +772,22 @@ function TelegramConfigCard({ onSaved }) {
     );
 }
 
+const PERMISSION_GROUP_ICONS = {
+    "Dashboard & Analytics": <BarChart3 className="h-4 w-4 text-sky-500" />,
+    "Suppliers & Categories": <Building2 className="h-4 w-4 text-emerald-500" />,
+    "Proforma Requests": <FileText className="h-4 w-4 text-amber-500" />,
+    "Proforma Quotations & Review": <Inbox className="h-4 w-4 text-indigo-500" />,
+    "Users & Access Control": <Users className="h-4 w-4 text-purple-500" />,
+    "Communications & Telegram": <Send className="h-4 w-4 text-cyan-500" />,
+    "System & Settings": <SettingsIcon className="h-4 w-4 text-slate-500" />,
+};
+
 function PermissionsCard() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [pending, setPending] = useState(null);
+    const [search, setSearch] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState("ALL");
     const { toast } = useToast();
     const { t } = useLanguage();
 
@@ -815,60 +834,154 @@ function PermissionsCard() {
         );
     }
 
-    const groups = data.permissions.reduce((acc, p) => {
+    const allGroups = data.permissions.reduce((acc, p) => {
         (acc[p.group] ||= []).push(p);
         return acc;
     }, {});
 
-    return (
-        <Card className="p-6">
-            <div className="flex items-center gap-2 mb-1">
-                <ShieldCheck className="h-4 w-4 text-brand-600" />
-                <h3 className="font-semibold">{t("settings.permissions")}</h3>
-            </div>
-            <p className="text-xs text-muted-foreground mb-4">
-                Toggle exactly what each role can do. Administrators always have full access and aren&apos;t shown here —
-                changes take effect immediately for every user with that role.
-            </p>
+    const categoryList = Object.keys(allGroups);
 
-            <div className="overflow-x-auto -mx-2 px-2">
-                <table className="w-full text-sm min-w-[520px]">
-                    <thead>
-                        <tr className="border-b border-border">
-                            <th className="text-left py-2 font-medium text-xs text-muted-foreground uppercase tracking-wide">Permission</th>
-                            {data.roles.map((r) => (
-                                <th key={r.value} className="text-center py-2 font-medium text-xs w-24">
-                                    {t(`role.${r.value}`, r.label)}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {Object.entries(groups).map(([group, perms]) => (
-                            <Fragment key={group}>
-                                <tr className="bg-muted/30">
-                                    <td colSpan={data.roles.length + 1} className="px-1 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    const filteredGroups = Object.entries(allGroups).reduce((acc, [group, perms]) => {
+        if (selectedCategory !== "ALL" && group !== selectedCategory) {
+            return acc;
+        }
+        const matches = perms.filter((p) => {
+            const q = search.toLowerCase().trim();
+            if (!q) return true;
+            return p.label.toLowerCase().includes(q) || p.value.toLowerCase().includes(q) || group.toLowerCase().includes(q);
+        });
+        if (matches.length > 0) {
+            acc[group] = matches;
+        }
+        return acc;
+    }, {});
+
+    return (
+        <Card className="p-6 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <ShieldCheck className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold text-base">{t("settings.permissions")}</h3>
+                        <Badge variant="outline" className="text-xs font-normal">
+                            Company Role Matrix
+                        </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        Configure granular permissions per corporate role. Administrators always retain unrestricted full access.
+                    </p>
+                </div>
+
+                <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                        placeholder="Search permissions…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-9 h-9 text-xs"
+                    />
+                </div>
+            </div>
+
+            {/* Category Filter Tabs */}
+            <div className="flex flex-wrap gap-1.5 border-b pb-3">
+                <button
+                    type="button"
+                    onClick={() => setSelectedCategory("ALL")}
+                    className={cn(
+                        "px-3 py-1 rounded-md text-xs font-medium transition-all",
+                        selectedCategory === "ALL"
+                            ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                >
+                    All Modules ({data.permissions.length})
+                </button>
+                {categoryList.map((cat) => {
+                    const count = allGroups[cat]?.length || 0;
+                    return (
+                        <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setSelectedCategory(cat)}
+                            className={cn(
+                                "inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all",
+                                selectedCategory === cat
+                                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                        >
+                            {PERMISSION_GROUP_ICONS[cat]}
+                            <span>{cat}</span>
+                            <span className="text-[10px] opacity-70">({count})</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Matrix View */}
+            <div className="space-y-4">
+                {Object.entries(filteredGroups).length === 0 ? (
+                    <div className="py-8 text-center text-sm text-muted-foreground">
+                        No permissions match your search filter.
+                    </div>
+                ) : (
+                    Object.entries(filteredGroups).map(([group, perms]) => (
+                        <div key={group} className="border rounded-xl overflow-hidden bg-card">
+                            <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b">
+                                <div className="flex items-center gap-2">
+                                    {PERMISSION_GROUP_ICONS[group] || <ShieldCheck className="h-4 w-4" />}
+                                    <span className="font-semibold text-xs tracking-wide uppercase text-foreground">
                                         {group}
-                                    </td>
-                                </tr>
-                                {perms.map((p) => (
-                                    <tr key={p.value} className="border-b border-border/60 last:border-b-0">
-                                        <td className="py-2 pr-2">{p.label}</td>
-                                        {data.roles.map((r) => (
-                                            <td key={r.value} className="text-center py-2">
-                                                <Switch
-                                                    checked={!!data.matrix[r.value]?.[p.value]}
-                                                    disabled={pending === `${r.value}:${p.value}`}
-                                                    onCheckedChange={(v) => toggle(r.value, p.value, v)}
-                                                />
-                                            </td>
+                                    </span>
+                                    <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                                        {perms.length} permissions
+                                    </Badge>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-border/60 text-xs text-muted-foreground">
+                                            <th className="text-left py-2 px-4 font-medium">Permission Description</th>
+                                            {data.roles.map((r) => (
+                                                <th key={r.value} className="text-center py-2 px-3 font-medium w-28">
+                                                    <span className="inline-block py-0.5 px-2 rounded-full bg-secondary text-secondary-foreground text-[11px] font-semibold">
+                                                        {t(`role.${r.value}`, r.label)}
+                                                    </span>
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border/40">
+                                        {perms.map((p) => (
+                                            <tr key={p.value} className="hover:bg-accent/40 transition-colors">
+                                                <td className="py-2.5 px-4">
+                                                    <div className="font-medium text-foreground text-xs sm:text-sm">
+                                                        {p.label}
+                                                    </div>
+                                                    <div className="font-mono text-[10px] text-muted-foreground">
+                                                        {p.value}
+                                                    </div>
+                                                </td>
+                                                {data.roles.map((r) => (
+                                                    <td key={r.value} className="text-center py-2.5 px-3">
+                                                        <Switch
+                                                            checked={!!data.matrix[r.value]?.[p.value]}
+                                                            disabled={pending === `${r.value}:${p.value}`}
+                                                            onCheckedChange={(v) => toggle(r.value, p.value, v)}
+                                                        />
+                                                    </td>
+                                                ))}
+                                            </tr>
                                         ))}
-                                    </tr>
-                                ))}
-                            </Fragment>
-                        ))}
-                    </tbody>
-                </table>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
         </Card>
     );
@@ -881,6 +994,7 @@ function CategoriesCard() {
     const [adding, setAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [editingName, setEditingName] = useState("");
+    const [deleteConfirmId, setDeleteConfirmId] = useState(null);
     const { toast } = useToast();
 
     const load = useCallback(async () => {
@@ -906,6 +1020,7 @@ function CategoriesCard() {
             await api("/api/categories", { method: "POST", body: JSON.stringify({ name: newName.trim() }) });
             setNewName("");
             await load();
+            toast({ title: "Category added", description: newName.trim() });
         } catch (e) {
             toast({ title: "Failed to add category", description: e.message, variant: "destructive" });
         } finally {
@@ -919,6 +1034,7 @@ function CategoriesCard() {
             await api(`/api/categories/${id}`, { method: "PATCH", body: JSON.stringify({ name: editingName.trim() }) });
             setEditingId(null);
             await load();
+            toast({ title: "Category updated" });
         } catch (e) {
             toast({ title: "Failed to rename category", description: e.message, variant: "destructive" });
         }
@@ -927,7 +1043,9 @@ function CategoriesCard() {
     const remove = async (id) => {
         try {
             await api(`/api/categories/${id}`, { method: "DELETE" });
+            setDeleteConfirmId(null);
             await load();
+            toast({ title: "Category deleted" });
         } catch (e) {
             toast({ title: "Failed to delete category", description: e.message, variant: "destructive" });
         }
@@ -936,72 +1054,110 @@ function CategoriesCard() {
     return (
         <Card className="p-6">
             <div className="flex items-center gap-2 mb-1">
-                <Tag className="h-4 w-4 text-brand-600" />
-                <h3 className="font-semibold">Categories</h3>
+                <Tag className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold text-base">Product & Supplier Categories</h3>
+                <Badge variant="outline" className="text-xs font-normal">
+                    {categories.length} Total
+                </Badge>
             </div>
             <p className="text-xs text-muted-foreground mb-4">
-                Used to tag suppliers and filter them when creating proforma requests. Changes here apply
-                everywhere categories are used across the app.
+                Used to tag suppliers, filter vendor quotes, and classify proforma requests across the company.
             </p>
 
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-5">
                 <Input
-                    placeholder="New category name…"
+                    placeholder="Enter new category name (e.g. Roasted Coffee, Packaging, Dairy)…"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && add()}
+                    className="h-9.5 text-sm"
                 />
-                <Button onClick={add} disabled={adding || !newName.trim()}>
-                    {adding ? <Spinner className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                <Button onClick={add} disabled={adding || !newName.trim()} className="h-9.5 px-4 shrink-0">
+                    {adding ? <Spinner className="h-4 w-4 mr-1.5" /> : <Plus className="h-4 w-4 mr-1.5" />}
+                    Add Category
                 </Button>
             </div>
 
-            <div className="max-h-96 overflow-y-auto space-y-1 -mx-1 px-1">
+            <div className="max-h-96 overflow-y-auto space-y-1.5 pr-1">
                 {loading ? (
                     <div className="py-8 text-center text-sm text-muted-foreground">
                         <Spinner className="h-4 w-4 inline mr-1" />
-                        Loading…
+                        Loading categories…
                     </div>
                 ) : categories.length === 0 ? (
-                    <div className="py-8 text-center text-sm text-muted-foreground">No categories yet.</div>
+                    <div className="py-8 text-center text-sm text-muted-foreground">No categories defined yet.</div>
                 ) : (
                     categories.map((c) => (
-                        <div key={c.id} className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-accent/50">
+                        <div
+                            key={c.id}
+                            className="flex items-center gap-3 p-2.5 rounded-lg border bg-card/60 hover:bg-accent/40 transition-colors"
+                        >
                             {editingId === c.id ? (
-                                <>
+                                <div className="flex items-center gap-2 flex-1">
                                     <Input
                                         value={editingName}
                                         onChange={(e) => setEditingName(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && rename(c.id)}
-                                        className="h-8"
+                                        className="h-8.5 text-sm flex-1"
                                         autoFocus
                                     />
-                                    <Button size="sm" className="h-8" onClick={() => rename(c.id)}>
+                                    <Button size="sm" className="h-8.5 px-3" onClick={() => rename(c.id)}>
                                         Save
                                     </Button>
-                                    <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditingId(null)}>
-                                        <X className="h-3.5 w-3.5" />
+                                    <Button size="sm" variant="ghost" className="h-8.5 px-2" onClick={() => setEditingId(null)}>
+                                        <X className="h-4 w-4" />
                                     </Button>
-                                </>
+                                </div>
+                            ) : deleteConfirmId === c.id ? (
+                                <div className="flex items-center justify-between w-full p-1 bg-destructive/10 rounded-md border border-destructive/20 text-xs">
+                                    <span className="text-destructive font-medium px-2">
+                                        Delete <b>"{c.name}"</b>?
+                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                        <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            className="h-7 px-2.5 text-xs"
+                                            onClick={() => remove(c.id)}
+                                        >
+                                            Confirm Delete
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-7 px-2 text-xs"
+                                            onClick={() => setDeleteConfirmId(null)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </div>
                             ) : (
                                 <>
-                                    <span className="flex-1 text-sm">{c.name}</span>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 w-7 p-0"
-                                        onClick={() => { setEditingId(c.id); setEditingName(c.name); }}
-                                    >
-                                        <Pencil className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700"
-                                        onClick={() => remove(c.id)}
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
+                                    <div className="grid place-items-center h-8 w-8 rounded-md bg-secondary text-secondary-foreground shrink-0">
+                                        <Tag className="h-4 w-4" />
+                                    </div>
+                                    <span className="flex-1 text-sm font-medium text-foreground">{c.name}</span>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-md border border-transparent hover:border-blue-200 dark:hover:border-blue-800 transition-all"
+                                            title="Edit Category"
+                                            onClick={() => { setEditingId(c.id); setEditingName(c.name); }}
+                                        >
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-md border border-transparent hover:border-rose-200 dark:hover:border-rose-800 transition-all"
+                                            title="Delete Category"
+                                            onClick={() => setDeleteConfirmId(c.id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </>
                             )}
                         </div>

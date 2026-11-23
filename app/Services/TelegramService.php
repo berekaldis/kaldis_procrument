@@ -29,6 +29,16 @@ class TelegramService
         return Setting::get('telegram_webhook_secret') ?: config('services.telegram_webhook_secret');
     }
 
+    private function client(int $timeout = 15): \Illuminate\Http\Client\PendingRequest
+    {
+        $client = Http::timeout($timeout);
+        if (! app()->isProduction()) {
+            $client = $client->withoutVerifying();
+        }
+
+        return $client;
+    }
+
     private function api(string $method): string
     {
         return "https://api.telegram.org/bot{$this->token()}/{$method}";
@@ -51,7 +61,7 @@ class TelegramService
         }
 
         try {
-            $resp = Http::timeout(15)->post($this->api('sendMessage'), [
+            $resp = $this->client(15)->post($this->api('sendMessage'), [
                 'chat_id' => $chatId,
                 'text' => $text,
                 'parse_mode' => 'HTML',
@@ -76,7 +86,7 @@ class TelegramService
         }
 
         try {
-            $resp = Http::timeout(15)->post($this->api('sendMessage'), [
+            $resp = $this->client(15)->post($this->api('sendMessage'), [
                 'chat_id' => $chatId,
                 'text' => $text,
                 'parse_mode' => 'HTML',
@@ -102,7 +112,7 @@ class TelegramService
         }
 
         try {
-            $resp = Http::timeout(10)->get($this->api('getMe'));
+            $resp = $this->client(10)->get($this->api('getMe'));
             if ($resp->successful() && $resp->json('ok', false) === true) {
                 return $resp->json('result');
             }
@@ -120,7 +130,7 @@ class TelegramService
         }
 
         try {
-            $resp = Http::timeout(10)->get($this->api('getWebhookInfo'));
+            $resp = $this->client(10)->get($this->api('getWebhookInfo'));
             if ($resp->successful() && $resp->json('ok', false) === true) {
                 return $resp->json('result');
             }
@@ -150,7 +160,7 @@ class TelegramService
                 $payload['secret_token'] = $secretToken;
             }
 
-            $resp = Http::timeout(15)->post($this->api('setWebhook'), $payload);
+            $resp = $this->client(15)->post($this->api('setWebhook'), $payload);
             if ($resp->successful() && $resp->json('ok', false) === true) {
                 return ['ok' => true];
             }
@@ -171,7 +181,7 @@ class TelegramService
         }
 
         try {
-            $resp = Http::timeout(15)->post($this->api('deleteWebhook'), ['drop_pending_updates' => false]);
+            $resp = $this->client(15)->post($this->api('deleteWebhook'), ['drop_pending_updates' => false]);
             if ($resp->successful() && $resp->json('ok', false) === true) {
                 return ['ok' => true];
             }
@@ -194,7 +204,7 @@ class TelegramService
         }
 
         try {
-            $meta = Http::timeout(15)->get($this->api('getFile'), ['file_id' => $fileId]);
+            $meta = $this->client(15)->get($this->api('getFile'), ['file_id' => $fileId]);
             if (! $meta->successful() || $meta->json('ok', false) !== true) {
                 return null;
             }
@@ -205,7 +215,7 @@ class TelegramService
             }
 
             $url = "https://api.telegram.org/file/bot{$this->token()}/{$filePath}";
-            $contents = Http::timeout(30)->get($url);
+            $contents = $this->client(30)->get($url);
             if (! $contents->successful()) {
                 return null;
             }
@@ -243,7 +253,11 @@ class TelegramService
         }
 
         try {
-            $resp = Http::timeout(15)->post($this->api('sendMessage'), [
+            $resp = $this->client(15)->post($this->api('sendMessage'), [
+                'chat_id' => $chatId,
+                'text' => $message,
+                'parse_mode' => 'HTML',
+            ]);
                 'chat_id' => $chatId,
                 'text' => $message,
                 'parse_mode' => 'HTML',

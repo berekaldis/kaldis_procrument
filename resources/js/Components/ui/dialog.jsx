@@ -32,10 +32,19 @@ export function DialogContent({ className, children, showClose = true, ...props 
     const ctx = useContext(DialogContext);
     const handleClose = () => ctx?.onOpenChange?.(false);
 
+    const hasMaxWidth = className && /\bmax-w-/.test(className);
+    const hasMaxHeight = className && /\bmax-h-/.test(className);
+    const hasOverflow = className && /\boverflow-/.test(className);
+    const hasPadding = className && /\bp(x|y)?-\d/.test(className);
+
     return (
         <div
             className={cn(
-                "relative z-10 w-full max-w-xl my-auto max-h-[88vh] overflow-y-auto rounded-2xl border border-border/80 bg-card p-6 sm:p-8 shadow-2xl shadow-slate-950/15 animate-procurement-scale-in",
+                "relative z-10 w-full my-auto rounded-2xl border border-border/80 bg-card shadow-2xl shadow-slate-950/15 animate-procurement-scale-in",
+                !hasMaxWidth && "max-w-xl",
+                !hasMaxHeight && "max-h-[88vh]",
+                !hasOverflow && "overflow-y-auto",
+                !hasPadding && "p-6 sm:p-8",
                 className
             )}
             {...props}

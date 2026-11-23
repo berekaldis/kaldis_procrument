@@ -1,11 +1,11 @@
 import { cn } from "../../lib/utils";
 
 const VARIANTS = {
-    default: "bg-primary text-primary-foreground shadow-sm hover:bg-brand-700",
-    outline: "border border-input bg-card shadow-sm hover:bg-accent hover:text-accent-foreground hover:border-brand-200",
+    default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+    outline: "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
     ghost: "hover:bg-accent hover:text-accent-foreground",
-    secondary: "bg-secondary text-secondary-foreground hover:bg-slate-200",
-    destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-rose-700",
+    secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+    destructive: "bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90",
     link: "text-primary underline-offset-4 hover:underline",
 };
 

@@ -14,36 +14,40 @@ use Illuminate\Support\Facades\DB;
 class PermissionController extends Controller
 {
     /**
-     * Human-readable label + group per permission, for the Settings >
-     * Permissions grid. Purely presentational — the enum itself remains
-     * the source of truth for which permissions exist.
+     * Human-readable label + module group per permission, categorized like the Company System.
      */
     private const LABELS = [
-        'dashboard.view' => ['label' => 'View dashboard', 'group' => 'Dashboard'],
-        'suppliers.view' => ['label' => 'View suppliers', 'group' => 'Suppliers'],
-        'suppliers.manage' => ['label' => 'Create / edit / delete suppliers', 'group' => 'Suppliers'],
-        'suppliers.verify' => ['label' => 'Verify suppliers', 'group' => 'Suppliers'],
-        'suppliers.import' => ['label' => 'Import suppliers from Excel / CSV', 'group' => 'Suppliers'],
-        'requests.view' => ['label' => 'View proforma requests', 'group' => 'Proforma Requests'],
-        'requests.create' => ['label' => 'Create proforma requests', 'group' => 'Proforma Requests'],
-        'requests.send' => ['label' => 'Send requests to suppliers', 'group' => 'Proforma Requests'],
-        'requests.edit' => ['label' => 'Edit proforma requests', 'group' => 'Proforma Requests'],
-        'requests.delete' => ['label' => 'Delete proforma requests', 'group' => 'Proforma Requests'],
-        'requests.manage' => ['label' => 'Manage proforma requests (Full control)', 'group' => 'Proforma Requests'],
-        'proformas.view' => ['label' => 'View proformas', 'group' => 'Proformas'],
-        'proformas.review' => ['label' => 'Review / accept / reject proformas', 'group' => 'Proformas'],
-        'proformas.edit' => ['label' => 'Edit proformas', 'group' => 'Proformas'],
-        'proformas.delete' => ['label' => 'Delete proformas', 'group' => 'Proformas'],
-        'notifications.view' => ['label' => 'View notifications', 'group' => 'System'],
-        'audit.view' => ['label' => 'View audit log', 'group' => 'System'],
-        'outbox.view' => ['label' => 'View Telegram outbox', 'group' => 'System'],
-        'settings.view' => ['label' => 'View settings', 'group' => 'Settings'],
-        'settings.manage' => ['label' => 'Manage settings (Telegram, permissions)', 'group' => 'Settings'],
-        'users.manage' => ['label' => 'Manage users & roles', 'group' => 'Users'],
-        'categories.manage' => ['label' => 'Manage defined product categories', 'group' => 'Suppliers'],
-        'proformas.compare' => ['label' => 'Compare proforma quotations side-by-side', 'group' => 'Proformas'],
-        'proformas.export' => ['label' => 'Export proformas & comparisons (CSV / PDF)', 'group' => 'Proformas'],
-        'reports.view' => ['label' => 'View procurement analytics & reports', 'group' => 'Dashboard'],
+        'dashboard.view' => ['label' => 'View Dashboard & KPIs', 'group' => 'Dashboard & Analytics'],
+        'reports.view' => ['label' => 'View Procurement Reports & Analytics', 'group' => 'Dashboard & Analytics'],
+
+        'suppliers.view' => ['label' => 'View Supplier Directory', 'group' => 'Suppliers & Categories'],
+        'suppliers.manage' => ['label' => 'Create, Edit & Delete Suppliers', 'group' => 'Suppliers & Categories'],
+        'suppliers.verify' => ['label' => 'Verify Suppliers & Approve Documents', 'group' => 'Suppliers & Categories'],
+        'suppliers.import' => ['label' => 'Bulk Import Suppliers (Excel / CSV)', 'group' => 'Suppliers & Categories'],
+        'categories.manage' => ['label' => 'Manage Product & Supplier Categories', 'group' => 'Suppliers & Categories'],
+
+        'requests.view' => ['label' => 'View Proforma Requests (RFQs)', 'group' => 'Proforma Requests'],
+        'requests.create' => ['label' => 'Create New Proforma Requests', 'group' => 'Proforma Requests'],
+        'requests.send' => ['label' => 'Dispatch RFQs to Suppliers via Telegram', 'group' => 'Proforma Requests'],
+        'requests.edit' => ['label' => 'Edit Existing Proforma Requests', 'group' => 'Proforma Requests'],
+        'requests.delete' => ['label' => 'Delete Proforma Requests', 'group' => 'Proforma Requests'],
+        'requests.manage' => ['label' => 'Full Administrative Control over Requests', 'group' => 'Proforma Requests'],
+
+        'proformas.view' => ['label' => 'View Received Proforma Quotations', 'group' => 'Proforma Quotations & Review'],
+        'proformas.review' => ['label' => 'Review, Accept & Reject Quotations', 'group' => 'Proforma Quotations & Review'],
+        'proformas.edit' => ['label' => 'Edit Proforma Items & Unit Prices', 'group' => 'Proforma Quotations & Review'],
+        'proformas.delete' => ['label' => 'Delete Proforma Quotations', 'group' => 'Proforma Quotations & Review'],
+        'proformas.compare' => ['label' => 'Side-by-Side Quotation Comparison Matrix', 'group' => 'Proforma Quotations & Review'],
+        'proformas.export' => ['label' => 'Export Quotations & Reports (Excel / PDF)', 'group' => 'Proforma Quotations & Review'],
+
+        'users.manage' => ['label' => 'Manage Users, Profiles & System Roles', 'group' => 'Users & Access Control'],
+
+        'notifications.view' => ['label' => 'View System Notifications & Alerts', 'group' => 'Communications & Telegram'],
+        'outbox.view' => ['label' => 'View Telegram Outbound Message Log', 'group' => 'Communications & Telegram'],
+
+        'audit.view' => ['label' => 'View Append-Only Security Audit Trail', 'group' => 'System & Settings'],
+        'settings.view' => ['label' => 'View Organization & System Settings', 'group' => 'System & Settings'],
+        'settings.manage' => ['label' => 'Manage Telegram Bot & System Configuration', 'group' => 'System & Settings'],
     ];
 
     public function index(): JsonResponse

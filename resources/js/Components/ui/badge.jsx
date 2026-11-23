@@ -1,10 +1,10 @@
 import { cn } from "../../lib/utils";
 
 const VARIANTS = {
-    default: "border-transparent bg-accent text-accent-foreground hover:bg-brand-100",
-    secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-slate-200",
+    default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+    secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
     outline: "text-foreground border-border",
-    destructive: "border-transparent bg-rose-100 text-rose-900 hover:bg-rose-200",
+    destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
 };
 
 export function Badge({ variant = "default", className, ...props }) {

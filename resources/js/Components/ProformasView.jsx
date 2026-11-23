@@ -476,14 +476,22 @@ export function ProformasView() {
 
             {/* Detail dialog */}
             <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-                <DialogContent className="sm:max-w-3xl max-h-[88vh] overflow-y-auto">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
                     {detail ? (
                         <>
                             <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-                                    <FileText className="h-5 w-5 text-brand-600 dark:text-gold-400" />
-                                    <span>Proforma Quotation — {detail.supplier?.legalName}</span>
-                                </DialogTitle>
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                                        <FileText className="h-5 w-5 text-brand-600 dark:text-gold-400" />
+                                        <span>Proforma Quotation — {detail.supplier?.legalName}</span>
+                                    </DialogTitle>
+                                    <div className="flex items-center gap-1 kaldi-no-print">
+                                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2.5 text-muted-foreground hover:text-foreground" onClick={() => window.print()}>
+                                            <Printer className="h-3.5 w-3.5 mr-1" />
+                                            Print
+                                        </Button>
+                                    </div>
+                                </div>
                                 <DialogDescription className="flex items-center gap-2 flex-wrap text-xs mt-1">
                                     <ReceivedViaBadge via={detail.receivedVia} />
                                     <ProformaStatusBadge status={detail.status} />
@@ -491,7 +499,20 @@ export function ProformasView() {
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div className="space-y-5 my-2">
+                            <div className="space-y-5 my-2 kaldi-print-area">
+                                <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h1 className="text-xl font-bold tracking-tight text-slate-900">KALDI'S COFFEE PROCUREMENT</h1>
+                                            <p className="text-xs text-slate-600">Official Proforma Quotation Record</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="font-mono text-base font-bold text-slate-900">{detail.referenceNo || "QUOTE"}</div>
+                                            <div className="text-xs text-slate-500">Supplier: {detail.supplier?.legalName}</div>
+                                            <div className="text-xs text-slate-500">Date: {new Date().toLocaleDateString()}</div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <Card className="p-4 bg-muted/30 border-muted">
                                     <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1 font-semibold">
                                         Associated Request
@@ -785,7 +806,7 @@ function ItemRows({ rows, setRows, requestItems, disabled, currency = "ETB" }) {
                                         <input
                                             type="number"
                                             min="0"
-                                            value={r.quantity}
+                                            value={r.quantity ?? ""}
                                             onChange={(e) => updateRow(i, { quantity: e.target.value })}
                                             className="w-full bg-transparent outline-none text-right"
                                         />
@@ -810,7 +831,7 @@ function ItemRows({ rows, setRows, requestItems, disabled, currency = "ETB" }) {
                                             type="number"
                                             min="0"
                                             step="0.01"
-                                            value={r.unitPrice}
+                                            value={r.unitPrice ?? ""}
                                             onChange={(e) => updateRow(i, { unitPrice: e.target.value })}
                                             className="w-full bg-transparent outline-none text-right"
                                         />
@@ -1041,6 +1062,18 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView, onReloa
                     </div>
                 ) : (
                     <div className="kaldi-print-area space-y-6">
+                        <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h1 className="text-xl font-bold tracking-tight text-slate-900">KALDI'S COFFEE PROCUREMENT</h1>
+                                    <p className="text-xs text-slate-600">Side-by-Side Proforma Evaluation & Comparison Matrix</p>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs font-semibold text-slate-900">{proformas.length} Quotation(s) Evaluated</div>
+                                    <div className="text-xs text-slate-500">Date: {new Date().toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                        </div>
                         {/* Winner Recommendation Highlight Banner */}
                         {winner && (
                             <div className="rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-emerald-50/80 p-4 dark:bg-emerald-950/40 dark:border-emerald-800/80 dark:from-emerald-950/40 dark:to-emerald-900/20 shadow-sm kaldi-no-print">
@@ -1410,18 +1443,32 @@ function ManualEntryDialog({ open, onOpenChange, suppliers, onDone }) {
             return;
         }
         api(`/api/proforma-requests?status=sent`).then((reqs) => {
-            const open = reqs.filter((r) => !r.respondedSupplierIds.includes(supplierId));
+            const list = Array.isArray(reqs) ? reqs : (reqs.data || []);
+            const open = list.filter((r) => !(r.respondedSupplierIds || []).map(Number).includes(Number(supplierId)));
             setAvailableRequests(open);
-            setRequestId(open[0]?.id || "");
+            setRequestId(open[0]?.id ? String(open[0].id) : "");
         }).catch(() => {});
     }, [supplierId]);
 
     useEffect(() => {
         if (!requestId) {
             setRequestItems([]);
+            setItems([]);
             return;
         }
-        api(`/api/proforma-requests/${requestId}`).then((r) => setRequestItems(r.items || [])).catch(() => setRequestItems([]));
+        api(`/api/proforma-requests/${requestId}`).then((r) => {
+            const list = r.items || [];
+            setRequestItems(list);
+            setItems(list.map((ri) => ({
+                itemName: ri.itemName || "",
+                quantity: Number(ri.quantity) || 1,
+                unit: ri.unit || "pcs",
+                unitPrice: 0,
+            })));
+        }).catch(() => {
+            setRequestItems([]);
+            setItems([]);
+        });
     }, [requestId]);
 
     const submit = async () => {
@@ -1468,7 +1515,7 @@ function ManualEntryDialog({ open, onOpenChange, suppliers, onDone }) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-6 sm:p-8 overflow-hidden">
                 <DialogHeader className="shrink-0">
                     <DialogTitle className="flex items-center gap-2 text-lg font-bold">
                         <PhoneCall className="h-5 w-5 text-brand-600 dark:text-gold-400" />
@@ -1489,7 +1536,7 @@ function ManualEntryDialog({ open, onOpenChange, suppliers, onDone }) {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {suppliers.map((s) => (
-                                        <SelectItem key={s.id} value={s.id}>
+                                        <SelectItem key={s.id} value={String(s.id)}>
                                             {s.legalName}
                                         </SelectItem>
                                     ))}
@@ -1498,13 +1545,13 @@ function ManualEntryDialog({ open, onOpenChange, suppliers, onDone }) {
                         </div>
                         <div>
                             <Label className="text-xs font-medium mb-1.5 block">Request *</Label>
-                            <Select value={requestId} onValueChange={setRequestId} disabled={!supplierId || availableRequests.length === 0}>
+                            <Select value={String(requestId || "")} onValueChange={setRequestId} disabled={!supplierId || availableRequests.length === 0}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={supplierId ? "Choose a request…" : "Select supplier first"} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {availableRequests.map((r) => (
-                                        <SelectItem key={r.id} value={r.id}>
+                                        <SelectItem key={r.id} value={String(r.id)}>
                                             {r.referenceNo} — {r.title}
                                         </SelectItem>
                                     ))}

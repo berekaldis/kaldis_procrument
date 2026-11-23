@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
     Building2,
     Plus,
@@ -27,6 +27,7 @@ import {
     Ban,
     PlayCircle,
     Upload,
+    Send,
 } from "lucide-react";
 import { SupplierImportModal } from "./SupplierImportModal.jsx";
 import { Spinner } from "./ui/spinner.jsx";
@@ -108,6 +109,18 @@ export function SuppliersView() {
     const [definedCategories, setDefinedCategories] = useState([]);
     const [catSearch, setCatSearch] = useState("");
     const [catDropdownOpen, setCatDropdownOpen] = useState(false);
+    const catDropdownRef = useRef(null);
+
+    useEffect(() => {
+        if (!catDropdownOpen) return;
+        const handleOutsideClick = (e) => {
+            if (catDropdownRef.current && !catDropdownRef.current.contains(e.target)) {
+                setCatDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleOutsideClick);
+        return () => document.removeEventListener("mousedown", handleOutsideClick);
+    }, [catDropdownOpen]);
     const [selectedIds, setSelectedIds] = useState([]);
     const [bulkBusy, setBulkBusy] = useState(false);
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -226,7 +239,7 @@ export function SuppliersView() {
     const openEdit = (s) => {
         setEditing(s);
         setForm({
-            legalName: s.legalName,
+            legalName: s.legalName || "",
             tradeName: s.tradeName || "",
             tradeLicenseNo: s.tradeLicenseNo || "",
             tin: s.tin || "",
@@ -239,7 +252,7 @@ export function SuppliersView() {
             paymentTerms: s.paymentTerms || "",
             bankDetails: s.bankDetails || "",
             notes: s.notes || "",
-            verificationStatus: s.verificationStatus,
+            verificationStatus: s.verificationStatus || "unverified",
         });
         setFormOpen(true);
     };
@@ -570,16 +583,16 @@ export function SuppliersView() {
 
             {/* Create / Edit dialog */}
             <Dialog open={formOpen} onOpenChange={setFormOpen}>
-                <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
-                    <DialogHeader className="shrink-0">
-                        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-                            <Building2 className="h-5 w-5 text-brand-600 dark:text-gold-400" />
-                            {editing ? "Edit Supplier" : "Add New Supplier"}
+                <DialogContent className="max-w-4xl w-[92vw] max-h-[90vh] flex flex-col p-6 sm:p-8 overflow-hidden">
+                    <DialogHeader className="shrink-0 border-b pb-4">
+                        <DialogTitle className="flex items-center gap-2.5 text-xl font-bold">
+                            <Building2 className="h-6 w-6 text-primary" />
+                            {editing ? "Edit Supplier Profile" : "Register New Supplier"}
                         </DialogTitle>
-                        <DialogDescription className="text-xs text-muted-foreground">
+                        <DialogDescription className="text-xs text-muted-foreground mt-1">
                             {editing
-                                ? "Update supplier legal profile, categories, and contact information."
-                                : "Register a new supplier to the procurement database."}
+                                ? "Update supplier legal profile, categories, contact information, and Telegram notification details."
+                                : "Add a supplier to Kaldi's procurement vendor database for RFQs and proforma requests."}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -590,92 +603,107 @@ export function SuppliersView() {
                             .filter(Boolean);
 
                         const toggleCategoryTag = (catName) => {
+                            const trimmed = (catName || "").trim();
+                            if (!trimmed) return;
                             let next;
-                            if (selectedCategoryList.includes(catName)) {
-                                next = selectedCategoryList.filter((c) => c !== catName);
+                            if (selectedCategoryList.includes(trimmed)) {
+                                next = selectedCategoryList.filter((c) => c !== trimmed);
                             } else {
-                                next = [...selectedCategoryList, catName];
+                                next = [...selectedCategoryList, trimmed];
                             }
                             setForm({ ...form, categoryTags: next.join(", ") });
                         };
 
                         return (
-                            <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-2">
-                                {/* Legal Company Name & Trade Name */}
-                                <div className="grid sm:grid-cols-2 gap-4">
-                                    <Field label="Legal Company Name *" required>
-                                        <Input
-                                            value={form.legalName}
-                                            onChange={(e) => setForm({ ...form, legalName: e.target.value })}
-                                            placeholder="e.g. Biftu Coffee Exporters PLC"
-                                        />
-                                    </Field>
-                                    <Field label="Trade Name / Brand">
-                                        <Input
-                                            value={form.tradeName}
-                                            onChange={(e) => setForm({ ...form, tradeName: e.target.value })}
-                                            placeholder="e.g. Biftu Coffee"
-                                        />
-                                    </Field>
+                            <div className="flex-1 overflow-y-auto space-y-5 py-3 pr-1">
+                                {/* Section 1: Business Identification */}
+                                <div className="space-y-3.5">
+                                    <div className="flex items-center justify-between border-b pb-1.5">
+                                        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                            <Building2 className="h-4 w-4 text-primary" />
+                                            Company Identification
+                                        </h4>
+                                    </div>
+
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <Field label="Legal Company Name *" required>
+                                            <Input
+                                                value={form.legalName}
+                                                onChange={(e) => setForm({ ...form, legalName: e.target.value })}
+                                                placeholder="e.g. Biftu Coffee Exporters PLC"
+                                                className="h-10 text-sm font-medium"
+                                            />
+                                        </Field>
+                                        <Field label="TIN Number (Taxpayer ID)">
+                                            <Input
+                                                value={form.tin}
+                                                onChange={(e) => setForm({ ...form, tin: e.target.value.trim() })}
+                                                placeholder="e.g. 0012345678"
+                                                className="h-10 text-sm font-mono"
+                                            />
+                                        </Field>
+                                    </div>
+
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <Field label="Payment Terms">
+                                            <Input
+                                                value={form.paymentTerms}
+                                                onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
+                                                placeholder="e.g. Net 30 days, Cash on Delivery"
+                                                className="h-10 text-sm"
+                                            />
+                                        </Field>
+                                        <Field label="Verification Status">
+                                            <Select
+                                                value={form.verificationStatus || "unverified"}
+                                                onValueChange={(v) => setForm({ ...form, verificationStatus: v })}
+                                            >
+                                                <SelectTrigger className="h-10 text-sm">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="unverified">Unverified (Pending Review)</SelectItem>
+                                                    <SelectItem value="documents_received">Documents Received</SelectItem>
+                                                    <SelectItem value="verified">Verified (Approved for RFQs)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </Field>
+                                    </div>
                                 </div>
 
-                                {/* Trade License, TIN, VAT */}
-                                <div className="grid sm:grid-cols-3 gap-3">
-                                    <Field label="Trade License No.">
-                                        <Input
-                                            value={form.tradeLicenseNo}
-                                            onChange={(e) => setForm({ ...form, tradeLicenseNo: e.target.value })}
-                                            placeholder="License No."
-                                        />
-                                    </Field>
-                                    <Field label="TIN Number">
-                                        <Input
-                                            value={form.tin}
-                                            onChange={(e) => setForm({ ...form, tin: e.target.value })}
-                                            placeholder="TIN Number"
-                                        />
-                                    </Field>
-                                    <Field label="VAT Number">
-                                        <Input
-                                            value={form.vatNo}
-                                            onChange={(e) => setForm({ ...form, vatNo: e.target.value })}
-                                            placeholder="VAT Number"
-                                        />
-                                    </Field>
-                                </div>
-
-                                {/* Defined Category & Searchable Picker */}
-                                <div className="space-y-1.5 pt-1">
+                                {/* Section 2: Categories */}
+                                <div className="space-y-3 pt-2 border-t">
                                     <div className="flex items-center justify-between">
-                                        <Label className="text-xs font-medium">
-                                            Supplier Categories <span className="text-rose-500">*</span>
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                            <Tag className="h-4 w-4 text-primary" />
+                                            Supplier Categories
                                         </Label>
                                         {userCan(user, "suppliers.manage") && (
                                             <button
                                                 type="button"
-                                                className="text-xs text-brand-600 dark:text-gold-400 hover:underline flex items-center gap-1"
+                                                className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
                                                 onClick={() => setCategoriesOpen(true)}
                                             >
-                                                <Plus className="h-3 w-3" /> Manage Categories
+                                                <Plus className="h-3.5 w-3.5" /> Manage Categories
                                             </button>
                                         )}
                                     </div>
 
-                                    {/* Selected Badges */}
+                                    {/* Selected Category Badges */}
                                     {selectedCategoryList.length > 0 && (
-                                        <div className="flex flex-wrap gap-1.5 pb-1">
+                                        <div className="flex flex-wrap gap-1.5 p-2.5 bg-muted/30 border rounded-lg">
                                             {selectedCategoryList.map((cat) => (
                                                 <Badge
                                                     key={cat}
                                                     variant="secondary"
-                                                    className="px-2 py-0.5 text-xs bg-brand-50 text-brand-700 dark:bg-gold-950 dark:text-gold-300 border border-brand-200 dark:border-gold-800 flex items-center gap-1"
+                                                    className="px-2.5 py-1 text-xs flex items-center gap-1.5 font-medium"
                                                 >
-                                                    <Tag className="h-3 w-3" />
+                                                    <Tag className="h-3 w-3 opacity-60" />
                                                     {cat}
                                                     <button
                                                         type="button"
                                                         onClick={() => toggleCategoryTag(cat)}
-                                                        className="hover:text-rose-600 rounded-full"
+                                                        className="hover:text-rose-600 rounded-full transition-colors ml-0.5"
                                                     >
                                                         <X className="h-3 w-3" />
                                                     </button>
@@ -685,35 +713,58 @@ export function SuppliersView() {
                                     )}
 
                                     {/* Searchable Dropdown */}
-                                    <div className="relative">
+                                    <div className="relative" ref={catDropdownRef}>
                                         <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                             <Input
-                                                placeholder="Search & select category..."
+                                                placeholder="Search or type a new category to tag..."
                                                 value={catSearch}
                                                 onChange={(e) => {
                                                     setCatSearch(e.target.value);
                                                     setCatDropdownOpen(true);
                                                 }}
                                                 onFocus={() => setCatDropdownOpen(true)}
-                                                className="pl-8 pr-8 h-9 text-xs"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" && catSearch.trim()) {
+                                                        e.preventDefault();
+                                                        toggleCategoryTag(catSearch.trim());
+                                                        setCatSearch("");
+                                                        setCatDropdownOpen(false);
+                                                    }
+                                                }}
+                                                className="pl-9 pr-9 h-10 text-sm"
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setCatDropdownOpen(!catDropdownOpen)}
-                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                             >
                                                 <ChevronDown className="h-4 w-4" />
                                             </button>
                                         </div>
 
                                         {catDropdownOpen && (
-                                            <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-card border rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto divide-y divide-border">
+                                            <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-card border rounded-xl shadow-xl overflow-hidden max-h-52 overflow-y-auto divide-y divide-border animate-procurement-scale-in">
+                                                {catSearch.trim() && !definedCategories.some((c) => c.name.toLowerCase() === catSearch.trim().toLowerCase()) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            toggleCategoryTag(catSearch.trim());
+                                                            setCatSearch("");
+                                                            setCatDropdownOpen(false);
+                                                        }}
+                                                        className="w-full text-left px-3.5 py-2.5 text-xs text-primary font-medium hover:bg-primary/5 flex items-center gap-2"
+                                                    >
+                                                        <Plus className="h-3.5 w-3.5" />
+                                                        Add custom tag: <span className="font-semibold underline">{catSearch.trim()}</span>
+                                                    </button>
+                                                )}
+
                                                 {definedCategories.filter((c) =>
                                                     c.name.toLowerCase().includes(catSearch.toLowerCase())
-                                                ).length === 0 ? (
-                                                    <div className="p-2.5 text-xs text-muted-foreground text-center">
-                                                        No matching category found.
+                                                ).length === 0 && !catSearch.trim() ? (
+                                                    <div className="p-3 text-xs text-muted-foreground text-center">
+                                                        No categories defined yet. Type above to add a tag.
                                                     </div>
                                                 ) : (
                                                     definedCategories
@@ -726,20 +777,22 @@ export function SuppliersView() {
                                                                 <button
                                                                     key={c.id}
                                                                     type="button"
-                                                                    onClick={() => toggleCategoryTag(c.name)}
+                                                                    onClick={() => {
+                                                                        toggleCategoryTag(c.name);
+                                                                    }}
                                                                     className={cn(
-                                                                        "w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors",
+                                                                        "w-full text-left px-3.5 py-2.5 text-xs sm:text-sm flex items-center justify-between transition-colors",
                                                                         isSelected
-                                                                            ? "bg-brand-50 font-medium text-brand-800 dark:bg-gold-950 dark:text-gold-300"
+                                                                            ? "bg-primary/10 font-medium text-foreground"
                                                                             : "hover:bg-accent/50 text-foreground"
                                                                     )}
                                                                 >
                                                                     <span className="flex items-center gap-2">
-                                                                        <Tag className="h-3 w-3 opacity-60" />
+                                                                        <Tag className="h-3.5 w-3.5 opacity-60" />
                                                                         {c.name}
                                                                     </span>
                                                                     {isSelected && (
-                                                                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-600 dark:text-gold-400" />
+                                                                        <CheckCircle2 className="h-4 w-4 text-primary" />
                                                                     )}
                                                                 </button>
                                                             );
@@ -750,97 +803,68 @@ export function SuppliersView() {
                                     </div>
                                 </div>
 
-                                {/* Verification Status & Payment Terms */}
-                                <div className="grid sm:grid-cols-2 gap-4">
-                                    <Field label="Verification Status">
-                                        <Select
-                                            value={form.verificationStatus}
-                                            onValueChange={(v) => setForm({ ...form, verificationStatus: v })}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="unverified">Unverified</SelectItem>
-                                                <SelectItem value="documents_received">Documents Received</SelectItem>
-                                                <SelectItem value="verified">Verified (Can receive RFQs)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </Field>
-                                    <Field label="Payment Terms">
-                                        <Input
-                                            value={form.paymentTerms}
-                                            onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
-                                            placeholder="e.g. 30 days net"
-                                        />
-                                    </Field>
-                                </div>
+                                {/* Section 3: Contact & Telegram Integration */}
+                                <div className="space-y-4 pt-2 border-t">
+                                    <div className="flex items-center justify-between border-b pb-1.5">
+                                        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                            <Send className="h-4 w-4 text-primary" />
+                                            Contact & Telegram Notifications
+                                        </h4>
+                                    </div>
 
-                                {/* Contact Person, Phone, Email, Telegram Chat ID */}
-                                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 border-t">
-                                    <Field label="Contact Person">
-                                        <Input
-                                            value={form.contactName}
-                                            onChange={(e) => setForm({ ...form, contactName: e.target.value })}
-                                            placeholder="Full name"
-                                        />
-                                    </Field>
-                                    <Field label="Contact Phone">
-                                        <Input
-                                            value={form.contactPhone}
-                                            onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
-                                            placeholder="+251 9..."
-                                        />
-                                    </Field>
-                                    <Field label="Contact Email">
-                                        <Input
-                                            type="email"
-                                            value={form.contactEmail}
-                                            onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
-                                            placeholder="email@supplier.com"
-                                        />
-                                    </Field>
-                                    <Field label="Telegram Chat ID">
-                                        <Input
-                                            value={form.telegramChatId}
-                                            onChange={(e) => setForm({ ...form, telegramChatId: e.target.value })}
-                                            placeholder="e.g. 123456789"
-                                        />
-                                    </Field>
-                                </div>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <Field label="Contact Person Full Name">
+                                            <Input
+                                                value={form.contactName}
+                                                onChange={(e) => setForm({ ...form, contactName: e.target.value })}
+                                                placeholder="e.g. Ato Abebe Kebede"
+                                                className="h-10 text-sm"
+                                            />
+                                        </Field>
+                                        <Field label="Contact Phone Number">
+                                            <Input
+                                                value={form.contactPhone}
+                                                onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
+                                                placeholder="+251 911 000 000"
+                                                className="h-10 text-sm font-mono"
+                                            />
+                                        </Field>
+                                    </div>
 
-                                {/* Bank Account & Notes */}
-                                <div className="space-y-3 pt-1 border-t">
-                                    <Field label="Bank Account Details">
-                                        <Input
-                                            value={form.bankDetails}
-                                            onChange={(e) => setForm({ ...form, bankDetails: e.target.value })}
-                                            placeholder="Bank name and account number..."
-                                        />
-                                    </Field>
-                                    <Field label="Internal Notes">
-                                        <Textarea
-                                            value={form.notes}
-                                            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                                            rows={2}
-                                            placeholder="Special remarks..."
-                                        />
-                                    </Field>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <Field label="Contact Email Address">
+                                            <Input
+                                                type="email"
+                                                value={form.contactEmail}
+                                                onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
+                                                placeholder="procurement@supplier.com"
+                                                className="h-10 text-sm"
+                                            />
+                                        </Field>
+                                        <Field label="Telegram Chat ID (For RFQs)">
+                                            <Input
+                                                value={form.telegramChatId}
+                                                onChange={(e) => setForm({ ...form, telegramChatId: e.target.value })}
+                                                placeholder="e.g. 123456789"
+                                                className="h-10 text-sm font-mono"
+                                            />
+                                        </Field>
+                                    </div>
                                 </div>
                             </div>
                         );
                     })()}
 
-                    <DialogFooter className="pt-3 border-t shrink-0">
-                        <Button variant="outline" onClick={() => setFormOpen(false)}>
+                    <DialogFooter className="pt-4 border-t shrink-0 flex items-center justify-end gap-3">
+                        <Button variant="outline" onClick={() => setFormOpen(false)} className="h-10 px-5">
                             Cancel
                         </Button>
                         <Button
                             onClick={save}
                             disabled={saving}
-                            className="bg-brand-600 hover:bg-brand-700 dark:bg-gold-500 dark:hover:bg-gold-600 dark:text-slate-950 font-medium"
+                            className="h-10 px-6 font-semibold"
                         >
-                            {saving && <Spinner className="h-4 w-4 mr-1.5" />}
+                            {saving && <Spinner className="h-4 w-4 mr-2" />}
                             {editing ? "Save Changes" : "Register Supplier"}
                         </Button>
                     </DialogFooter>
@@ -849,7 +873,7 @@ export function SuppliersView() {
 
             {/* Detail dialog */}
             <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-                <DialogContent className="sm:max-w-3xl max-h-[88vh] overflow-y-auto">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
                     {detail && (
                         <>
                             <DialogHeader>
@@ -1052,6 +1076,7 @@ function CategoriesDialog({ open, onOpenChange }) {
     const [adding, setAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [editingName, setEditingName] = useState("");
+    const [deleteConfirmId, setDeleteConfirmId] = useState(null);
     const { toast } = useToast();
 
     const load = useCallback(async () => {
@@ -1077,6 +1102,7 @@ function CategoriesDialog({ open, onOpenChange }) {
             await api("/api/categories", { method: "POST", body: JSON.stringify({ name: newName.trim() }) });
             setNewName("");
             await load();
+            toast({ title: "Category added", description: newName.trim() });
         } catch (e) {
             toast({ title: "Failed to add category", description: e.message, variant: "destructive" });
         } finally {
@@ -1090,6 +1116,7 @@ function CategoriesDialog({ open, onOpenChange }) {
             await api(`/api/categories/${id}`, { method: "PATCH", body: JSON.stringify({ name: editingName.trim() }) });
             setEditingId(null);
             await load();
+            toast({ title: "Category updated" });
         } catch (e) {
             toast({ title: "Failed to rename category", description: e.message, variant: "destructive" });
         }
@@ -1098,7 +1125,9 @@ function CategoriesDialog({ open, onOpenChange }) {
     const remove = async (id) => {
         try {
             await api(`/api/categories/${id}`, { method: "DELETE" });
+            setDeleteConfirmId(null);
             await load();
+            toast({ title: "Category deleted" });
         } catch (e) {
             toast({ title: "Failed to delete category", description: e.message, variant: "destructive" });
         }
@@ -1106,30 +1135,32 @@ function CategoriesDialog({ open, onOpenChange }) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange} containerClassName="z-[70]">
-            <DialogContent className="max-w-md z-[70]">
+            <DialogContent className="max-w-md z-[70] p-6">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Tag className="h-5 w-5 text-brand-600" />
-                        Manage Categories
+                    <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                        <Tag className="h-5 w-5 text-primary" />
+                        Manage Product Categories
                     </DialogTitle>
-                    <DialogDescription>
-                        Categories used to tag suppliers and filter them when creating proforma requests.
+                    <DialogDescription className="text-xs text-muted-foreground">
+                        Categories used to tag suppliers and filter RFQ supplier invitations.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 my-2">
                     <Input
                         placeholder="New category name…"
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && add()}
+                        className="h-9 text-sm"
                     />
-                    <Button onClick={add} disabled={adding || !newName.trim()}>
-                        {adding ? <Spinner className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    <Button onClick={add} disabled={adding || !newName.trim()} className="h-9 px-3.5 shrink-0">
+                        {adding ? <Spinner className="h-4 w-4" /> : <Plus className="h-4 w-4 mr-1" />}
+                        Add
                     </Button>
                 </div>
 
-                <div className="max-h-80 overflow-y-auto space-y-1 -mx-1 px-1">
+                <div className="max-h-80 overflow-y-auto space-y-1.5 pr-1">
                     {loading ? (
                         <div className="py-8 text-center text-sm text-muted-foreground">
                             <Spinner className="h-4 w-4 inline mr-1" />
@@ -1139,42 +1170,74 @@ function CategoriesDialog({ open, onOpenChange }) {
                         <div className="py-8 text-center text-sm text-muted-foreground">No categories yet.</div>
                     ) : (
                         categories.map((c) => (
-                            <div key={c.id} className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-accent/50">
+                            <div
+                                key={c.id}
+                                className="flex items-center gap-2.5 p-2 rounded-lg border bg-card/60 hover:bg-accent/40 transition-colors"
+                            >
                                 {editingId === c.id ? (
-                                    <>
+                                    <div className="flex items-center gap-2 flex-1">
                                         <Input
                                             value={editingName}
                                             onChange={(e) => setEditingName(e.target.value)}
                                             onKeyDown={(e) => e.key === "Enter" && rename(c.id)}
-                                            className="h-8"
+                                            className="h-8 text-sm flex-1"
                                             autoFocus
                                         />
-                                        <Button size="sm" className="h-8" onClick={() => rename(c.id)}>
+                                        <Button size="sm" className="h-8 px-2.5" onClick={() => rename(c.id)}>
                                             Save
                                         </Button>
-                                        <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditingId(null)}>
+                                        <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditingId(null)}>
                                             <X className="h-3.5 w-3.5" />
                                         </Button>
-                                    </>
+                                    </div>
+                                ) : deleteConfirmId === c.id ? (
+                                    <div className="flex items-center justify-between w-full p-1 bg-destructive/10 rounded-md border border-destructive/20 text-xs">
+                                        <span className="text-destructive font-medium px-1">
+                                            Delete <b>"{c.name}"</b>?
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                size="sm"
+                                                variant="destructive"
+                                                className="h-6 px-2 text-[11px]"
+                                                onClick={() => remove(c.id)}
+                                            >
+                                                Delete
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 px-1.5 text-[11px]"
+                                                onClick={() => setDeleteConfirmId(null)}
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    </div>
                                 ) : (
                                     <>
-                                        <span className="flex-1 text-sm">{c.name}</span>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-7 w-7 p-0"
-                                            onClick={() => { setEditingId(c.id); setEditingName(c.name); }}
-                                        >
-                                            <Pencil className="h-3.5 w-3.5" />
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700"
-                                            onClick={() => remove(c.id)}
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        </Button>
+                                        <Tag className="h-4 w-4 text-muted-foreground shrink-0 ml-1" />
+                                        <span className="flex-1 text-sm font-medium text-foreground">{c.name}</span>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-md border border-transparent hover:border-blue-200 dark:hover:border-blue-800 transition-all"
+                                                title="Edit Category"
+                                                onClick={() => { setEditingId(c.id); setEditingName(c.name); }}
+                                            >
+                                                <Pencil className="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-md border border-transparent hover:border-rose-200 dark:hover:border-rose-800 transition-all"
+                                                title="Delete Category"
+                                                onClick={() => setDeleteConfirmId(c.id)}
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
                                     </>
                                 )}
                             </div>
