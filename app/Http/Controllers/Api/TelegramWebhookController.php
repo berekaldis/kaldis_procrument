@@ -437,13 +437,11 @@ class TelegramWebhookController extends Controller
                 $itemBreakdown .= "{$num}️⃣ <b>{$item['itemName']}</b> ({$item['quantity']} {$item['unit']}) × {$uPrice} ETB = <b>{$tPrice} ETB</b>\n";
             }
 
-            $confirmText = "✅ <b>PROFORMA QUOTE RECEIVED & PRICED! / የፕሮፎርማ ዋጋ ገብቷል!</b>\n";
-            $confirmText .= "━━━━━━━━━━━━━━━━━━━━━━\n";
+            $confirmText = "✅ <b>PROFORMA QUOTE RECEIVED & PRICED! / የፕሮፎርማ ዋጋ ገብቷል!</b>\n\n";
             $confirmText .= "<b>Ref / መለያ ቁጥር:</b> {$pr->reference_no}\n";
             $confirmText .= "<b>Title / ርዕስ:</b> {$pr->title}\n\n";
             $confirmText .= "💰 <b>Priced Line Items / የዋጋ ዝርዝር፦</b>\n{$itemBreakdown}\n";
-            $confirmText .= "💵 <b>Total Amount / ጠቅላላ ዋጋ:</b> <b>".number_format($extracted['total_amount'], 2)." ETB</b>\n";
-            $confirmText .= "━━━━━━━━━━━━━━━━━━━━━━\n";
+            $confirmText .= "💵 <b>Total Amount / ጠቅላላ ዋጋ:</b> <b>".number_format($extracted['total_amount'], 2)." ETB</b>\n\n";
             $confirmText .= "🇪🇹 እናመሰግናለን! የፕሮፎርማ ዋጋዎ በግዢ ሥርዓት ውስጥ ተመዝግቧል።";
 
             $this->telegram->sendRaw($supplier->telegram_chat_id, $confirmText);

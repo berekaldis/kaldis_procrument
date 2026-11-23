@@ -82,8 +82,7 @@ class TelegramMessages
 
         if ($lang === 'am') {
             $msg = "📦 <b>አዲስ የፕሮፎርማ ጥያቄ</b>\n";
-            $msg .= "☕ <i>ይህ ይፋዊ የካልዲስ ቡና (Kaldi's Coffee) የፕሮፎርማ ጥያቄ ነው።</i>\n";
-            $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
+            $msg .= "☕ <i>ይህ ይፋዊ የካልዲስ ቡና (Kaldi's Coffee) የፕሮፎርማ ጥያቄ ነው።</i>\n\n";
             $msg .= "<b>መለያ፦</b> {$ref}\n";
             $msg .= "<b>ርዕስ፦</b> {$title}\n";
             $msg .= "<b>የክፍያ ሁኔታ፦</b> {$paymentTerms}\n";
@@ -100,8 +99,7 @@ class TelegramMessages
         }
 
         $msg = "📦 <b>NEW PROFORMA REQUEST</b>\n";
-        $msg .= "☕ <i>This is an official Kaldi's Coffee Proforma Request</i>\n";
-        $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "☕ <i>This is an official Kaldi's Coffee Proforma Request</i>\n\n";
         $msg .= "<b>Ref:</b> {$ref}\n";
         $msg .= "<b>Title:</b> {$title}\n";
         $msg .= "<b>Terms:</b> {$paymentTerms}\n";
