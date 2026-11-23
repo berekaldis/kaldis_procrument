@@ -82,6 +82,7 @@ class TelegramMessages
 
         if ($lang === 'am') {
             $msg = "📦 <b>አዲስ የፕሮፎርማ ጥያቄ</b>\n";
+            $msg .= "☕ <i>ይህ ይፋዊ የካልዲስ ቡና (Kaldi's Coffee) የፕሮፎርማ ጥያቄ ነው።</i>\n";
             $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
             $msg .= "<b>መለያ፦</b> {$ref}\n";
             $msg .= "<b>ርዕስ፦</b> {$title}\n";
@@ -91,13 +92,15 @@ class TelegramMessages
             $msg .= "💡 <b>ዋጋ ለመላክ፦</b>\n";
             $msg .= "የእያንዳንዱን እቃ ዋጋ በዚህ መልክ ይመልሱ፦\n";
             $msg .= "ምሳሌ፦ <code>1: 450, 2: 120</code>\n";
-            $msg .= "(ወይም የዋጋ ማቅረቢያ ሰነድ / ፎቶ ይላኩ)\n";
+            $msg .= "(ወይም የዋጋ ማቅረቢያ ሰነድ / ፎቶ ይላኩ)\n\n";
+            $msg .= "🔒 <i>ይህ ከካልዲስ ቡና ኦፊሴላዊ የግዥ ስርዓት የተላከ ህጋዊ ጥያቄ ነው።</i>\n";
             $msg .= "እናመሰግናለን!";
 
             return $msg;
         }
 
         $msg = "📦 <b>NEW PROFORMA REQUEST</b>\n";
+        $msg .= "☕ <i>This is an official Kaldi's Coffee Proforma Request</i>\n";
         $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
         $msg .= "<b>Ref:</b> {$ref}\n";
         $msg .= "<b>Title:</b> {$title}\n";
@@ -107,7 +110,8 @@ class TelegramMessages
         $msg .= "💡 <b>How to Submit Price:</b>\n";
         $msg .= "Reply directly with your unit prices:\n";
         $msg .= "Example: <code>1: 450, 2: 120</code>\n";
-        $msg .= "(or attach a PDF quotation / photo)\n";
+        $msg .= "(or attach a PDF quotation / photo)\n\n";
+        $msg .= "🔒 <i>Verified official Kaldi's Coffee procurement request.</i>\n";
         $msg .= "Thank you!";
 
         return $msg;
