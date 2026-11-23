@@ -479,14 +479,23 @@ export function ProformasView() {
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
                     {detail ? (
                         <>
-                            <DialogHeader>
+                            <DialogHeader className="kaldi-no-print">
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
                                     <DialogTitle className="flex items-center gap-2 text-xl font-bold">
                                         <FileText className="h-5 w-5 text-brand-600 dark:text-gold-400" />
                                         <span>Proforma Quotation — {detail.supplier?.legalName}</span>
                                     </DialogTitle>
                                     <div className="flex items-center gap-1 kaldi-no-print">
-                                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2.5 text-muted-foreground hover:text-foreground" onClick={() => window.print()}>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 text-xs px-2.5 text-muted-foreground hover:text-foreground"
+                                            onClick={() => {
+                                                document.body.classList.add("kaldi-printing");
+                                                window.print();
+                                                setTimeout(() => document.body.classList.remove("kaldi-printing"), 500);
+                                            }}
+                                        >
                                             <Printer className="h-3.5 w-3.5 mr-1" />
                                             Print
                                         </Button>
@@ -500,17 +509,22 @@ export function ProformasView() {
                             </DialogHeader>
 
                             <div className="space-y-5 my-2 kaldi-print-area">
-                                <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
+                                <div className="kaldi-print-only border-b-2 border-slate-900 pb-3 mb-4">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h1 className="text-xl font-bold tracking-tight text-slate-900">KALDI'S COFFEE PROCUREMENT</h1>
-                                            <p className="text-xs text-slate-600">Official Proforma Quotation Record</p>
+                                            <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Official Procurement Record</div>
+                                            <h1 className="text-xl font-black tracking-tight text-slate-900">KALDI'S COFFEE</h1>
+                                            <p className="text-xs font-semibold text-slate-600">Proforma Quotation Record Sheet</p>
                                         </div>
                                         <div className="text-right">
                                             <div className="font-mono text-base font-bold text-slate-900">{detail.referenceNo || "QUOTE"}</div>
-                                            <div className="text-xs text-slate-500">Supplier: {detail.supplier?.legalName}</div>
+                                            <div className="text-xs text-slate-600">RFQ: <b className="font-mono">{detail.request?.referenceNo}</b></div>
                                             <div className="text-xs text-slate-500">Date: {new Date().toLocaleDateString()}</div>
                                         </div>
+                                    </div>
+                                    <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
+                                        <span className="font-bold text-slate-900 text-sm">Supplier: {detail.supplier?.legalName}</span>
+                                        <span className="text-slate-600">Status: <b className="font-semibold uppercase">{detail.status}</b></span>
                                     </div>
                                 </div>
                                 <Card className="p-4 bg-muted/30 border-muted">
@@ -556,10 +570,12 @@ export function ProformasView() {
                                             Priced Line Items
                                         </div>
                                         {userCan(user, "proformas.review") && (
-                                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={savePricing} disabled={savingItems}>
-                                                {savingItems && <Spinner className="h-3 w-3 mr-1" />}
-                                                Save Pricing
-                                            </Button>
+                                            <div className="kaldi-no-print">
+                                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={savePricing} disabled={savingItems}>
+                                                    {savingItems && <Spinner className="h-3 w-3 mr-1" />}
+                                                    Save Pricing
+                                                </Button>
+                                            </div>
                                         )}
                                     </div>
                                     <ItemRows
@@ -572,7 +588,7 @@ export function ProformasView() {
                                 </div>
 
                                 {detail.filePath ? (
-                                    <div>
+                                    <div className="kaldi-no-print">
                                         <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2 font-semibold">
                                             Attachment Document
                                         </div>
@@ -634,7 +650,7 @@ export function ProformasView() {
                                     </div>
                                 )}
 
-                                <div>
+                                <div className="kaldi-no-print">
                                     <Label className="text-xs font-medium mb-1.5 block">Internal Notes</Label>
                                     <Textarea
                                         value={notes}
@@ -648,7 +664,7 @@ export function ProformasView() {
                                 </div>
 
                                 {userCan(user, "proformas.review") && (
-                                    <div className="pt-3 border-t">
+                                    <div className="pt-3 border-t kaldi-no-print">
                                         <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2 font-semibold">
                                             Update Status
                                         </div>
@@ -679,8 +695,26 @@ export function ProformasView() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Official Print Signatures Box */}
+                                <div className="kaldi-print-only pt-8 mt-6 border-t-2 border-slate-300">
+                                    <div className="grid grid-cols-2 gap-8 text-xs">
+                                        <div>
+                                            <div className="font-bold text-slate-800">Evaluated & Recorded By:</div>
+                                            <div className="text-slate-600 mt-0.5">Procurement Department</div>
+                                            <div className="mt-8 border-b border-slate-400"></div>
+                                            <div className="text-[10px] text-slate-500 mt-1">Officer Signature & Date</div>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-slate-800">Review Decision:</div>
+                                            <div className="text-slate-600 mt-0.5">Status: <span className="font-bold uppercase">{detail.status}</span></div>
+                                            <div className="mt-8 border-b border-slate-400"></div>
+                                            <div className="text-[10px] text-slate-500 mt-1">Approval Signature & Date</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <DialogFooter className="mt-4 flex items-center justify-between">
+                            <DialogFooter className="mt-4 flex items-center justify-between kaldi-no-print">
                                 <div>
                                     {userCan(user, "proformas.delete") && (
                                         <Button
@@ -1062,17 +1096,26 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView, onReloa
                     </div>
                 ) : (
                     <div className="kaldi-print-area space-y-6">
-                        <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
+                        <div className="kaldi-print-only border-b-2 border-slate-900 pb-3 mb-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <h1 className="text-xl font-bold tracking-tight text-slate-900">KALDI'S COFFEE PROCUREMENT</h1>
-                                    <p className="text-xs text-slate-600">Side-by-Side Proforma Evaluation & Comparison Matrix</p>
+                                    <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Official Evaluation Document</div>
+                                    <h1 className="text-xl font-black tracking-tight text-slate-900">KALDI'S COFFEE PROCUREMENT</h1>
+                                    <p className="text-xs font-semibold text-slate-600">Proforma Side-by-Side Evaluation & Comparison Matrix</p>
                                 </div>
                                 <div className="text-right">
                                     <div className="text-xs font-semibold text-slate-900">{proformas.length} Quotation(s) Evaluated</div>
                                     <div className="text-xs text-slate-500">Date: {new Date().toLocaleDateString()}</div>
                                 </div>
                             </div>
+                            {winner && (
+                                <div className="mt-2 pt-2 border-t border-slate-200 text-xs">
+                                    <span className="font-semibold text-slate-700">Recommended Winner (Best Value): </span>
+                                    <b className="text-slate-900">{winner.proforma.supplier.legalName}</b>
+                                    <span className="text-slate-600"> — Total Quoted: </span>
+                                    <b className="font-mono text-slate-900">{fmtMoney(winner.proforma.totalAmount)} {winner.proforma.currency || "ETB"}</b>
+                                </div>
+                            )}
                         </div>
                         {/* Winner Recommendation Highlight Banner */}
                         {winner && (
@@ -1333,6 +1376,28 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView, onReloa
                                 💡 Select proformas with line items or attached PDF/photo quotations to compare them side-by-side.
                             </div>
                         )}
+
+                        {/* Official Print Signatures Box */}
+                        <div className="kaldi-print-only pt-8 mt-6 border-t-2 border-slate-300">
+                            <div className="text-xs font-bold text-slate-800 mb-3 uppercase tracking-wider">Procurement Committee Recommendation & Approval</div>
+                            <div className="grid grid-cols-3 gap-6 text-xs">
+                                <div>
+                                    <div className="font-semibold text-slate-700">Committee Member 1:</div>
+                                    <div className="mt-8 border-b border-slate-400"></div>
+                                    <div className="text-[10px] text-slate-500 mt-1">Name, Signature & Date</div>
+                                </div>
+                                <div>
+                                    <div className="font-semibold text-slate-700">Committee Member 2:</div>
+                                    <div className="mt-8 border-b border-slate-400"></div>
+                                    <div className="text-[10px] text-slate-500 mt-1">Name, Signature & Date</div>
+                                </div>
+                                <div>
+                                    <div className="font-semibold text-slate-700">Procurement Manager Approval:</div>
+                                    <div className="mt-8 border-b border-slate-400"></div>
+                                    <div className="text-[10px] text-slate-500 mt-1">Signature, Stamp & Date</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -1346,7 +1411,14 @@ function CompareDialog({ open, onOpenChange, proformas, onClear, onView, onReloa
                                 <FileSpreadsheet className="h-4 w-4 mr-1" />
                                 Export CSV
                             </Button>
-                            <Button variant="outline" onClick={() => window.print()}>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    document.body.classList.add("kaldi-printing");
+                                    window.print();
+                                    setTimeout(() => document.body.classList.remove("kaldi-printing"), 500);
+                                }}
+                            >
                                 <Printer className="h-4 w-4 mr-1" />
                                 Print / Save PDF
                             </Button>

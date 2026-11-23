@@ -212,7 +212,11 @@ export function RequestsView({ onNavigate }) {
         }
     };
 
-    const printRequest = () => window.print();
+    const printRequest = () => {
+        document.body.classList.add("kaldi-printing");
+        window.print();
+        setTimeout(() => document.body.classList.remove("kaldi-printing"), 500);
+    };
 
     return (
         <div className="space-y-4">
@@ -456,7 +460,7 @@ export function RequestsView({ onNavigate }) {
                 <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-6 sm:p-7 overflow-hidden">
                     {detail ? (
                         <>
-                            <DialogHeader className="shrink-0 space-y-2 pb-1">
+                            <DialogHeader className="shrink-0 space-y-2 pb-1 kaldi-no-print">
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
                                     <div className="flex items-center gap-2">
                                         <span className="font-mono text-primary bg-primary/10 px-2.5 py-0.5 rounded text-xs font-bold tracking-wide">
@@ -484,19 +488,23 @@ export function RequestsView({ onNavigate }) {
 
                             {/* Scrollable Body */}
                             <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-1 kaldi-print-area text-xs">
-                                <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
+                                <div className="kaldi-print-only border-b-2 border-slate-900 pb-3 mb-4">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h1 className="text-xl font-bold tracking-tight text-slate-900">KALDI'S COFFEE PROCUREMENT</h1>
-                                            <p className="text-xs text-slate-600">Official Proforma Request (RFQ) Document</p>
+                                            <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Official Procurement Document</div>
+                                            <h1 className="text-xl font-black tracking-tight text-slate-900">KALDI'S COFFEE</h1>
+                                            <p className="text-xs font-semibold text-slate-600">Proforma Request (RFQ) — Request for Quotation</p>
                                         </div>
                                         <div className="text-right">
                                             <div className="font-mono text-base font-bold text-slate-900">{detail.referenceNo}</div>
-                                            <div className="text-xs text-slate-500">Status: {detail.status?.toUpperCase()}</div>
+                                            <div className="text-xs text-slate-600">Status: <span className="font-semibold uppercase">{detail.status}</span></div>
                                             <div className="text-xs text-slate-500">Date: {new Date().toLocaleDateString()}</div>
                                         </div>
                                     </div>
-                                    <div className="mt-2 text-sm font-semibold text-slate-900">{detail.title}</div>
+                                    <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
+                                        <span className="font-bold text-slate-900 text-sm">{detail.title}</span>
+                                        <span className="text-slate-600">Response Deadline: <b className="text-slate-900">{fmtDate(detail.deadline)}</b></span>
+                                    </div>
                                 </div>
 
                                 {/* 4-cell compact metadata summary strip */}
@@ -675,6 +683,30 @@ export function RequestsView({ onNavigate }) {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Official Print Signatures Box */}
+                                <div className="kaldi-print-only pt-8 mt-6 border-t-2 border-slate-300">
+                                    <div className="grid grid-cols-3 gap-6 text-xs">
+                                        <div>
+                                            <div className="font-bold text-slate-800">Prepared By:</div>
+                                            <div className="text-slate-600 mt-0.5">{detail.requestedBy || "Procurement Officer"}</div>
+                                            <div className="mt-8 border-b border-slate-400"></div>
+                                            <div className="text-[10px] text-slate-500 mt-1">Signature & Date</div>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-slate-800">Verified By:</div>
+                                            <div className="text-slate-600 mt-0.5">Procurement Department</div>
+                                            <div className="mt-8 border-b border-slate-400"></div>
+                                            <div className="text-[10px] text-slate-500 mt-1">Signature & Date</div>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-slate-800">Approved By:</div>
+                                            <div className="text-slate-600 mt-0.5">Authorized Signatory</div>
+                                            <div className="mt-8 border-b border-slate-400"></div>
+                                            <div className="text-[10px] text-slate-500 mt-1">Official Stamp / Date</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Footer Actions */}

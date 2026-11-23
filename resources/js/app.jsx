@@ -4,6 +4,17 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { LanguageProvider } from './hooks/use-language';
 import '../css/app.css';
 
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeprint', () => {
+        if (document.querySelector('.kaldi-print-area')) {
+            document.body.classList.add('kaldi-printing');
+        }
+    });
+    window.addEventListener('afterprint', () => {
+        document.body.classList.remove('kaldi-printing');
+    });
+}
+
 createInertiaApp({
     title: (title) => title || "Kaldi's Procurement",
     resolve: (name) =>

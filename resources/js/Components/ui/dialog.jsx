@@ -19,7 +19,7 @@ export function Dialog({ open, onOpenChange, children, containerClassName }) {
             <div className={cn("fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto", containerClassName)}>
                 {/* Backdrop does NOT close modal on click per user requirement — only X button closes */}
                 <div
-                    className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm animate-procurement-fade-in"
+                    className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm animate-procurement-fade-in kaldi-no-print"
                     aria-hidden="true"
                 />
                 {children}

@@ -294,59 +294,110 @@ html, body {
     transform-origin: bottom center;
 }
 
-/* Print support */
+/* ==========================================================================
+   Kaldi's Coffee Procurement — Universal Print Engine
+   ========================================================================== */
+.kaldi-print-only {
+    display: none !important;
+}
+
 @media print {
     @page {
-        size: auto;
-        margin: 12mm 14mm 14mm 14mm;
+        size: A4 portrait;
+        margin: 10mm 12mm 12mm 12mm;
     }
 
-    /* Reset background and text colors to clean paper-white and crisp black */
+    /* Reset root document for paper output */
     html, body {
         background: #ffffff !important;
         color: #0f172a !important;
-        font-size: 11pt !important;
-        line-height: 1.4 !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+        font-size: 9.5pt !important;
+        line-height: 1.35 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
-    /* Hide the background app chrome when printing a dialog with kaldi-print-area */
-    body:has(.kaldi-print-area) #app {
-        display: none !important;
-    }
-
-    /* Hide interactive UI controls, buttons, toolbars, and modal backdrops */
+    /* Elements that should NEVER print under any circumstance */
     header,
     nav,
     aside,
     button,
+    input[type="button"],
+    input[type="submit"],
+    iframe,
     .kaldi-no-print,
-    [role="dialog"] button,
-    [data-radix-dialog-overlay],
-    .fixed.inset-0.bg-black\/80,
-    .fixed.inset-0.bg-slate-950\/50,
     .backdrop-blur-sm,
-    .animate-procurement-fade-in {
+    .bg-slate-950\/50,
+    .bg-black\/50,
+    .bg-black\/80,
+    [aria-hidden="true"],
+    [aria-label="Close modal"] {
         display: none !important;
     }
 
-    /* Radix UI Portals MUST stay visible and unconstrained for print */
-    [data-radix-portal] {
+    /* Show print-only elements */
+    .kaldi-print-only {
         display: block !important;
-        position: static !important;
-        width: 100% !important;
-        height: auto !important;
-        overflow: visible !important;
     }
 
-    /* Unconstrain dialog wrappers so paper pagination works across multiple pages */
-    [data-radix-portal] > div,
-    [role="dialog"],
-    div:has(> .kaldi-print-area),
-    .kaldi-print-area {
+    /* ==========================================================================
+       SCENARIO A: Printing an open modal dialog (.kaldi-print-area exists)
+       ========================================================================== */
+    body:has(.kaldi-print-area) #app,
+    body.kaldi-printing #app {
+        position: static !important;
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    /* Hide the sibling main content so ONLY the dialog document prints */
+    body:has(.kaldi-print-area) main > div > *:not(:has(.kaldi-print-area)),
+    body.kaldi-printing main > div > *:not(:has(.kaldi-print-area)) {
+        display: none !important;
+    }
+
+    /* Unconstrain all dialog ancestor containers from screen-fixed/scrolling boxes */
+    body:has(.kaldi-print-area) .fixed.inset-0,
+    body:has(.kaldi-print-area) .relative,
+    body:has(.kaldi-print-area) [role="dialog"],
+    body:has(.kaldi-print-area) div:has(> .kaldi-print-area),
+    body.kaldi-printing .fixed.inset-0,
+    body.kaldi-printing .relative,
+    body.kaldi-printing [role="dialog"],
+    body.kaldi-printing div:has(> .kaldi-print-area) {
         position: static !important;
         inset: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: #ffffff !important;
+        transform: none !important;
+        display: block !important;
+    }
+
+    .kaldi-print-area {
+        position: static !important;
+        display: block !important;
         width: 100% !important;
         max-width: 100% !important;
         height: auto !important;
@@ -354,65 +405,69 @@ html, body {
         overflow: visible !important;
         padding: 0 !important;
         margin: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
         background: #ffffff !important;
         color: #0f172a !important;
-        transform: none !important;
     }
 
-    body * {
-        visibility: hidden;
-    }
-
-    .kaldi-print-area,
-    .kaldi-print-area * {
-        visibility: visible !important;
-    }
-
-    .kaldi-print-area {
-        position: static !important;
-        display: block !important;
+    /* ==========================================================================
+       SCENARIO B: Printing regular app pages (Ctrl+P without dialog)
+       ========================================================================== */
+    body:not(:has(.kaldi-print-area)):not(.kaldi-printing) #app {
         width: 100% !important;
-        margin: 0 !important;
+        overflow: visible !important;
+    }
+    body:not(:has(.kaldi-print-area)):not(.kaldi-printing) main {
         padding: 0 !important;
-        background: #ffffff !important;
-        color: #0f172a !important;
+        margin: 0 !important;
+        width: 100% !important;
+        overflow: visible !important;
     }
 
-    /* Professional tables for paper */
-    .kaldi-print-area table {
+    /* ==========================================================================
+       Professional Typography & Table Layout for Paper
+       ========================================================================== */
+    table {
         width: 100% !important;
         border-collapse: collapse !important;
         page-break-inside: auto !important;
+        break-inside: auto !important;
     }
 
-    .kaldi-print-area tr {
+    thead {
+        display: table-header-group !important;
+    }
+
+    tr {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
 
-    .kaldi-print-area th,
-    .kaldi-print-area td {
+    th, td {
         border: 1px solid #cbd5e1 !important;
-        padding: 6px 8px !important;
+        padding: 5px 8px !important;
         color: #0f172a !important;
+        font-size: 8.5pt !important;
     }
 
-    .kaldi-print-area th {
+    th {
         background-color: #f1f5f9 !important;
         font-weight: 700 !important;
         text-transform: uppercase !important;
-        font-size: 8pt !important;
+        font-size: 7.5pt !important;
+        letter-spacing: 0.05em !important;
     }
 
-    .kaldi-print-area h1,
-    .kaldi-print-area h2,
-    .kaldi-print-area h3,
-    .kaldi-print-area h4 {
+    h1, h2, h3, h4 {
         page-break-after: avoid !important;
         break-after: avoid !important;
         color: #0f172a !important;
+    }
+
+    /* Force background colors to print where needed */
+    .bg-muted\/30,
+    .bg-muted\/40,
+    .bg-muted\/50 {
+        background-color: #f8fafc !important;
     }
 
     * {
