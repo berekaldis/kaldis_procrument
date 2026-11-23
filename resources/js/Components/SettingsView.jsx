@@ -373,44 +373,6 @@ export function SettingsView() {
                         </Card>
                     )}
 
-                    {/* Setup guide */}
-                    <Card className="p-6">
-                        <h3 className="font-semibold flex items-center gap-2 mb-3">
-                            <SettingsIcon className="h-4 w-4 text-brand-600" />
-                            How to connect a real Telegram bot
-                        </h3>
-                        <ol className="space-y-3 text-sm">
-                            <Step n={1}>
-                                Open <a className="text-brand-600 underline inline-flex items-center gap-0.5" href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer"> @BotFather <ExternalLink className="h-3 w-3" /></a>{" "}
-                                in Telegram and send <code className="bg-muted px-1.5 py-0.5 rounded text-xs">/newbot</code>.
-                            </Step>
-                            <Step n={2}>
-                                Follow the prompts to name your bot (e.g. "Kaldi's Coffee Procurement Bot") and choose a
-                                username ending in <code className="bg-muted px-1.5 py-0.5 rounded text-xs">bot</code>.
-                            </Step>
-                            <Step n={3}>
-                                Copy the API token BotFather returns. It looks like{" "}
-                                <code className="bg-muted px-1.5 py-0.5 rounded text-xs">123456789:ABCdefGHI…</code>
-                            </Step>
-                            <Step n={4}>
-                                Paste the token (and generate a webhook secret) in the <b>Telegram Configuration</b> card
-                                above — no <code className="bg-muted px-1.5 py-0.5 rounded text-xs">.env</code> editing needed.
-                            </Step>
-                            <Step n={5}>
-                                Register the webhook above (or via{" "}
-                                <code className="bg-muted px-1.5 py-0.5 rounded text-xs">php artisan telegram:webhook:set</code>)
-                                with your public HTTPS URL — a deployed domain, or an{" "}
-                                <a className="text-brand-600 underline" href="https://ngrok.com" target="_blank" rel="noopener noreferrer">ngrok</a>{" "}
-                                tunnel while developing locally.
-                            </Step>
-                            <Step n={6}>
-                                Tell suppliers to open your bot in Telegram, send <code className="bg-muted px-1.5 py-0.5 rounded text-xs">/start</code>, and
-                                reply with their company TIN to link their chat. Once linked, they&apos;ll receive proforma
-                                requests and can reply with files, photos, or text — each one lands here automatically.
-                            </Step>
-                        </ol>
-                    </Card>
-
                     {/* Architecture summary */}
                     <div className="grid sm:grid-cols-2 gap-4">
                         <Card className="p-5">
@@ -1165,17 +1127,6 @@ function CategoriesCard() {
                 )}
             </div>
         </Card>
-    );
-}
-
-function Step({ n, children }) {
-    return (
-        <li className="flex gap-3">
-            <span className="grid place-items-center h-6 w-6 rounded-full bg-brand-100 text-brand-700 text-xs font-medium shrink-0">
-                {n}
-            </span>
-            <div className="pt-0.5">{children}</div>
-        </li>
     );
 }
 

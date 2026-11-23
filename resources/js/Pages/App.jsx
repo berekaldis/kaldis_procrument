@@ -164,6 +164,26 @@ export default function App({ auth: initialAuth }) {
         return () => clearInterval(t);
     }, [bootstrapped, loadNotifications]);
 
+    // Prefetch primary views in idle time so switching between tabs is instantaneous
+    useEffect(() => {
+        if (!user) return;
+        const prefetch = () => {
+            import("../Components/DashboardView");
+            import("../Components/SuppliersView");
+            import("../Components/RequestsView");
+            import("../Components/ProformasView");
+        };
+        if (typeof window !== "undefined") {
+            if ("requestIdleCallback" in window) {
+                const id = window.requestIdleCallback(prefetch, { timeout: 2000 });
+                return () => window.cancelIdleCallback?.(id);
+            } else {
+                const t = setTimeout(prefetch, 800);
+                return () => clearTimeout(t);
+            }
+        }
+    }, [user]);
+
     const goTo = (s) => { setSection(s); setMobileNavOpen(false); };
     const handleLogin = (u) => { setUser(u); setSection("dashboard"); setBootstrapped(false); };
     const handleLogout = async () => {

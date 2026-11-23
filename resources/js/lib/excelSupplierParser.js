@@ -1,5 +1,3 @@
-import * as XLSX from "xlsx";
-
 /**
  * Normalizes text by trimming whitespace.
  */
@@ -60,7 +58,8 @@ export function cleanCategoryName(catStr) {
  * Parses an Excel or CSV file buffer / ArrayBuffer.
  * Returns an array of parsed supplier objects.
  */
-export function parseSupplierExcel(arrayBuffer) {
+export async function parseSupplierExcel(arrayBuffer) {
+    const XLSX = await import("xlsx");
     const workbook = XLSX.read(arrayBuffer, { type: "array" });
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) {

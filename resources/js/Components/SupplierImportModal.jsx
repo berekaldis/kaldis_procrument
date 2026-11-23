@@ -64,7 +64,7 @@ export function SupplierImportModal({ open, onOpenChange, onSuccess }) {
 
         try {
             const buffer = await selected.arrayBuffer();
-            const results = parseSupplierExcel(buffer);
+            const results = await parseSupplierExcel(buffer);
             
             if (results.length === 0) {
                 toast({
