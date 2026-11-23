@@ -42,12 +42,12 @@ class TelegramMessages
             'am' => "👋 <b>እንኳን ወደ ካልዲስ ቡና ግዥ ቦት በደህና መጡ!</b>\n\n🌐 እባክዎ ቋንቋዎን ይምረጡ / Please select your preferred language:",
         ],
         'welcome_unlinked' => [
-            'en' => "✅ <b>Language set to English 🇬🇧</b>\n\n👋 Welcome to Kaldi's Procurement Bot!\n\nYour Telegram Chat ID is: <code>:chat_id</code>\n\n📌 Please share this Chat ID with the Kaldi procurement team to register your company and start receiving RFQs directly here.",
-            'am' => "✅ <b>ቋንቋ ወደ አማርኛ 🇪🇹 ተቀይሯል።</b>\n\n👋 እንኳን ወደ ካልዲስ ቡና ግዥ ቦት በደህና መጡ!\n\nየእርስዎ ቴሌግራም ቻት መለያ (Chat ID)፦ <code>:chat_id</code>\n\n📌 ድርጅትዎን በስርዓቱ ለማስመዝገብ እና የፕሮፎርማ ጥያቄዎችን ለመቀበል እባክዎ ይህን መለያ ቁጥር ለግዥ ቡድኑ ያጋሩ።",
+            'en' => "👋 <b>Welcome to Kaldi's Procurement Bot!</b>\n\nYour Telegram Chat ID is: <code>:chat_id</code>\n\n📌 Please share this Chat ID with the Kaldi procurement team to register your company and start receiving RFQs directly here.",
+            'am' => "👋 <b>እንኳን ወደ ካልዲስ ቡና ግዥ ቦት በደህና መጡ!</b>\n\nየእርስዎ ቴሌግራም ቻት መለያ (Chat ID)፦ <code>:chat_id</code>\n\n📌 ድርጅትዎን በስርዓቱ ለማስመዝገብ እና የፕሮፎርማ ጥያቄዎችን ለመቀበል እባክዎ ይህን መለያ ቁጥር ለግዥ ቡድኑ ያጋሩ።",
         ],
         'welcome_linked' => [
-            'en' => "✅ <b>Language set to English 🇬🇧</b>\n\n👋 Welcome, <b>:name</b>!\nYou are connected to Kaldi Procurement. You will receive proforma requests here and can reply directly with your quotations.",
-            'am' => "✅ <b>ቋንቋ ወደ አማርኛ 🇪🇹 ተቀይሯል።</b>\n\n👋 እንኳን በደህና መጡ <b>:name</b>!\nከካልዲስ ቡና ግዥ ስርዓት ጋር ተገናኝተዋል። የፕሮፎርማ ጥያቄዎች እዚህ ይደርሱዎታል፤ በቀጥታም ዋጋዎን መላክ ይችላሉ።",
+            'en' => "👋 Welcome, <b>:name</b>!\nYou are connected to Kaldi Procurement. You will receive proforma requests here and can reply directly with your quotations.",
+            'am' => "👋 እንኳን በደህና መጡ <b>:name</b>!\nከካልዲስ ቡና ግዥ ስርዓት ጋር ተገናኝተዋል። የፕሮፎርማ ጥያቄዎች እዚህ ይደርሱዎታል፤ በቀጥታም ዋጋዎን መላክ ይችላሉ።",
         ],
         'language_changed' => [
             'en' => "Language set to English 🇬🇧",

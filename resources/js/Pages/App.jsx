@@ -466,7 +466,7 @@ export default function App({ auth: initialAuth }) {
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1">
                             <span>Developed by</span>
-                            <span className="font-semibold text-foreground">BI Department</span>
+                            <span className="font-semibold text-foreground">IT Department</span>
                         </div>
                         <span className="text-border">|</span>
                         <span className="inline-flex items-center gap-1.5 text-muted-foreground">

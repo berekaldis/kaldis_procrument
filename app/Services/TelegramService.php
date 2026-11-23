@@ -53,19 +53,25 @@ class TelegramService
      * Send a plain conversational reply (bot linking flow, acknowledgements)
      * without recording it in the Telegram Outbox — the outbox is reserved
      * for outbound proforma request notifications.
+     * By default, it sends remove_keyboard to clear any custom keyboard tray.
      */
-    public function sendRaw(string $chatId, string $text): bool
+    public function sendRaw(string $chatId, string $text, bool $removeKeyboard = true): bool
     {
         if (! $this->isConfigured()) {
             return false;
         }
 
         try {
-            $resp = $this->client(15)->post($this->api('sendMessage'), [
+            $payload = [
                 'chat_id' => $chatId,
                 'text' => $text,
                 'parse_mode' => 'HTML',
-            ]);
+            ];
+            if ($removeKeyboard) {
+                $payload['reply_markup'] = json_encode(['remove_keyboard' => true]);
+            }
+
+            $resp = $this->client(15)->post($this->api('sendMessage'), $payload);
 
             return $resp->successful() && $resp->json('ok', false) === true;
         } catch (\Throwable $e) {
@@ -76,8 +82,59 @@ class TelegramService
     }
 
     /**
-     * Send a reply with a one-time reply keyboard (used for the language
-     * picker). Buttons collapse back to the normal keyboard after one tap.
+     * Send a message with inline buttons attached directly under the message text bubble.
+     * This keeps the user keyboard completely clean and avoids persistent bottom buttons.
+     */
+    public function sendWithInlineKeyboard(string $chatId, string $text, array $inlineKeyboard): bool
+    {
+        if (! $this->isConfigured()) {
+            return false;
+        }
+
+        try {
+            $resp = $this->client(15)->post($this->api('sendMessage'), [
+                'chat_id' => $chatId,
+                'text' => $text,
+                'parse_mode' => 'HTML',
+                'reply_markup' => json_encode([
+                    'inline_keyboard' => $inlineKeyboard,
+                ]),
+            ]);
+
+            return $resp->successful() && $resp->json('ok', false) === true;
+        } catch (\Throwable $e) {
+            Log::warning('Telegram sendWithInlineKeyboard failed: '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Acknowledge an inline button tap.
+     */
+    public function answerCallbackQuery(string $callbackQueryId, ?string $text = null): bool
+    {
+        if (! $this->isConfigured()) {
+            return false;
+        }
+
+        try {
+            $params = ['callback_query_id' => $callbackQueryId];
+            if ($text !== null) {
+                $params['text'] = $text;
+            }
+            $resp = $this->client(10)->post($this->api('answerCallbackQuery'), $params);
+
+            return $resp->successful();
+        } catch (\Throwable $e) {
+            Log::warning('Telegram answerCallbackQuery failed: '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Send a reply with a one-time reply keyboard.
      */
     public function sendWithKeyboard(string $chatId, string $text, array $buttonRows): bool
     {
@@ -153,7 +210,7 @@ class TelegramService
         try {
             $payload = [
                 'url' => $url,
-                'allowed_updates' => ['message'],
+                'allowed_updates' => ['message', 'callback_query'],
                 'drop_pending_updates' => false,
             ];
             if ($secretToken) {
