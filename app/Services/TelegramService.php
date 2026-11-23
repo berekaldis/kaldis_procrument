@@ -258,10 +258,6 @@ class TelegramService
                 'text' => $message,
                 'parse_mode' => 'HTML',
             ]);
-                'chat_id' => $chatId,
-                'text' => $message,
-                'parse_mode' => 'HTML',
-            ]);
 
             if ($resp->successful() && ($resp->json('ok', false) === true)) {
                 return TelegramOutbox::create([
